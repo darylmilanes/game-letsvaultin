@@ -36,6 +36,15 @@
         input, select { outline: none; transition: all 0.2s; }
         input:focus, select:focus { border-color: #22c55e; box-shadow: 0 0 8px #22c55e; }
         
+        /* New Selected State CSS */
+        .selected-answer {
+            border-color: #eab308 !important; /* Yellow-500 */
+            border-width: 2px !important;
+            background-color: rgba(234, 179, 8, 0.1) !important; /* Subtle yellow tint */
+            box-shadow: 0 0 15px rgba(234, 179, 8, 0.3);
+            color: #fef08a !important; /* Yellow-200 */
+        }
+
         /* Modal Animation */
         @keyframes fadeIn { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
         .modal-anim { animation: fadeIn 0.2s ease-out forwards; }
@@ -70,6 +79,26 @@
         </div>
     </div>
 
+    <!-- STUDENT RULES MODAL (Briefing) -->
+    <div id="briefing-modal" class="hidden fixed inset-0 bg-slate-950 z-[90] flex flex-col p-6 items-center justify-center">
+        <div class="max-w-md w-full border border-green-500/50 p-6 rounded-lg bg-black/90 shadow-2xl relative overflow-hidden h-[80vh] flex flex-col">
+            <div class="absolute top-0 left-0 w-full h-1 bg-green-500 animate-pulse"></div>
+            
+            <h2 class="text-2xl font-bold text-center mb-6 neon-text border-b border-green-800 pb-2">HEIST PROTOCOLS</h2>
+            
+            <!-- Slides Container -->
+            <div class="flex-1 overflow-y-auto mb-4 text-sm space-y-4" id="briefing-content">
+                <!-- Content injected via JS -->
+            </div>
+
+            <!-- Navigation -->
+            <div class="flex justify-between gap-4 mt-auto pt-4 border-t border-green-900">
+                <button onclick="app.prevBriefing()" id="btn-prev-briefing" class="px-4 py-2 border border-green-700 text-green-500 rounded disabled:opacity-30">PREV</button>
+                <button onclick="app.nextBriefing()" id="btn-next-briefing" class="flex-1 py-2 bg-green-700 text-slate-900 font-bold rounded hover:bg-green-600">NEXT</button>
+            </div>
+        </div>
+    </div>
+
     <!-- MAIN APP CONTAINER -->
     <div id="app" class="max-w-md mx-auto min-h-screen relative flex flex-col border-x border-green-900/30 shadow-2xl shadow-green-900/10">
         
@@ -90,21 +119,17 @@
                 <p class="text-green-400 font-bold tracking-widest text-lg">HEIST PROTOCOL</p>
                 <p class="text-xs text-green-700">SECURE TERMINAL ACCESS</p>
             </div>
-            <!-- Check Teacher Status -->
-            <button onclick="app.checkTeacherStatus()" class="btn-press w-full py-4 border border-green-500 bg-green-900/20 text-green-400 font-bold uppercase hover:bg-green-500 hover:text-slate-900 transition-colors rounded">
+            <button onclick="app.showTeacherLogin()" class="btn-press w-full py-4 border border-green-500 bg-green-900/20 text-green-400 font-bold uppercase hover:bg-green-500 hover:text-slate-900 transition-colors rounded">
                 <i class="fas fa-user-tie mr-2"></i> Overseer (Teacher)
             </button>
-            
-            <!-- Student Flow Trigger -->
-            <button onclick="app.startStudentFlow()" class="btn-press w-full py-4 border border-green-500 bg-green-900/20 text-green-400 font-bold uppercase hover:bg-green-500 hover:text-slate-900 transition-colors rounded">
+            <button onclick="app.showStudentLogin()" class="btn-press w-full py-4 border border-green-500 bg-green-900/20 text-green-400 font-bold uppercase hover:bg-green-500 hover:text-slate-900 transition-colors rounded">
                 <i class="fas fa-users mr-2"></i> Heist Crew (Student)
             </button>
         </div>
 
-        <!-- VIEW: TEACHER LOGIN (UPDATED) -->
+        <!-- VIEW: TEACHER LOGIN -->
         <div id="view-teacher-login" class="hidden flex flex-col gap-4 justify-center flex-1 p-8">
             <h2 class="text-xl text-center border-b border-green-800 pb-2 mb-4">OVERSEER AUTHENTICATION</h2>
-            
             <div class="space-y-3">
                 <div>
                     <label class="text-[10px] text-green-600 ml-1">ADMIN EMAIL</label>
@@ -115,70 +140,76 @@
                     <input type="password" id="adminPass" placeholder="••••••••" class="w-full bg-slate-900 border border-green-700 text-green-400 p-3 rounded placeholder-green-900 focus:bg-slate-800">
                 </div>
             </div>
-
             <div class="grid grid-cols-2 gap-3 mt-2">
-                <button onclick="app.loginTeacher()" class="btn-press py-3 bg-green-700 text-white font-bold rounded hover:bg-green-600 shadow-lg">
-                    LOGIN
-                </button>
-                <button onclick="app.registerTeacher()" class="btn-press py-3 border border-green-600 text-green-500 font-bold rounded hover:bg-green-900/30">
-                    CREATE ID
-                </button>
+                <button onclick="app.loginTeacher()" class="btn-press py-3 bg-green-700 text-white font-bold rounded hover:bg-green-600 shadow-lg">LOGIN</button>
+                <button onclick="app.registerTeacher()" class="btn-press py-3 border border-green-600 text-green-500 font-bold rounded hover:bg-green-900/30">CREATE ID</button>
             </div>
-            
             <button onclick="app.showLanding()" class="text-xs text-green-800 mt-4 hover:text-green-500 text-center"> [ CANCEL SEQUENCE ] </button>
         </div>
 
-        <!-- VIEW: TEACHER SETUP -->
-        <div id="view-teacher-setup" class="hidden flex flex-col h-full p-4">
+        <!-- VIEW: TEACHER MISSION CONTROL (NEW LIBRARY) -->
+        <div id="view-teacher-library" class="hidden flex flex-col h-full p-4">
             <div class="flex justify-between items-center mb-4 border-b border-yellow-800 pb-1">
-                <h2 class="text-lg font-bold text-yellow-500">MISSION BRIEFING</h2>
-                <button onclick="app.logout()" class="text-[10px] text-red-500 hover:text-red-400 border border-red-900 px-2 py-1 rounded">LOGOUT</button>
+                <h2 class="text-lg font-bold text-yellow-500">MISSION CONTROL</h2>
+                <button onclick="app.logout()" class="text-[10px] text-red-500 border border-red-900 px-2 py-1 rounded">LOGOUT</button>
             </div>
-            
-            <div class="bg-slate-900 p-3 rounded border border-green-800 mb-4">
-                <input type="text" id="setupQ" placeholder="Enter Question Text" class="w-full bg-slate-800 text-sm p-2 mb-2 rounded border border-slate-700">
+
+            <button onclick="app.openEditor()" class="w-full py-3 bg-green-900/30 border border-green-600 text-green-400 mb-4 rounded hover:bg-green-900/50">
+                <i class="fas fa-plus-circle mr-2"></i> CREATE NEW MISSION
+            </button>
+
+            <h3 class="text-xs text-green-600 mb-2 uppercase">AVAILABLE DATABASES</h3>
+            <div class="flex-1 overflow-y-auto space-y-2 mb-4" id="missionList">
+                <div class="text-center text-xs text-gray-500 mt-10">LOADING LIBRARIES...</div>
+            </div>
+
+            <button onclick="app.viewHistory()" class="mt-auto w-full py-3 border border-green-600 text-green-500 font-bold text-xs rounded hover:bg-green-900/30 transition-all flex justify-center items-center gap-2">
+                <i class="fas fa-history"></i> ARCHIVED LOGS
+            </button>
+        </div>
+
+        <!-- VIEW: TEACHER EDITOR (NEW) -->
+        <div id="view-teacher-editor" class="hidden flex flex-col h-full p-4">
+            <div class="flex justify-between items-center mb-2">
+                <input type="text" id="missionTitle" placeholder="MISSION TITLE (e.g. Physics 1)" class="bg-transparent text-lg font-bold text-white border-b border-green-700 w-2/3 outline-none">
+                <button onclick="app.saveMission()" class="text-xs bg-green-700 text-slate-900 px-3 py-1 rounded font-bold">SAVE DB</button>
+            </div>
+
+            <div class="bg-slate-900 p-3 rounded border border-green-800 mb-2">
+                <div class="flex justify-between text-xs text-gray-500 mb-1">
+                    <span>EDITING PANEL</span>
+                    <span id="editingIndicator" class="text-yellow-500 hidden">UPDATING QUESTION...</span>
+                </div>
+                <input type="text" id="editQ" placeholder="Question Text" class="w-full bg-slate-800 text-sm p-2 mb-2 rounded border border-slate-700">
                 <div class="grid grid-cols-2 gap-2 mb-2">
-                    <input type="text" id="setupA" placeholder="Option A" class="bg-slate-800 text-xs p-2 rounded border border-slate-700">
-                    <input type="text" id="setupB" placeholder="Option B" class="bg-slate-800 text-xs p-2 rounded border border-slate-700">
-                    <input type="text" id="setupC" placeholder="Option C" class="bg-slate-800 text-xs p-2 rounded border border-slate-700">
-                    <input type="text" id="setupD" placeholder="Option D" class="bg-slate-800 text-xs p-2 rounded border border-slate-700">
+                    <input type="text" id="editA" placeholder="Option A" class="bg-slate-800 text-xs p-2 rounded border border-slate-700">
+                    <input type="text" id="editB" placeholder="Option B" class="bg-slate-800 text-xs p-2 rounded border border-slate-700">
+                    <input type="text" id="editC" placeholder="Option C" class="bg-slate-800 text-xs p-2 rounded border border-slate-700">
+                    <input type="text" id="editD" placeholder="Option D" class="bg-slate-800 text-xs p-2 rounded border border-slate-700">
                 </div>
                 <div class="flex gap-2">
-                    <select id="setupCorrect" class="bg-slate-800 text-xs p-2 rounded border border-slate-700 flex-1">
+                    <select id="editCorrect" class="bg-slate-800 text-xs p-2 rounded border border-slate-700 flex-1">
                         <option value="A">Correct: A</option>
                         <option value="B">Correct: B</option>
                         <option value="C">Correct: C</option>
                         <option value="D">Correct: D</option>
                     </select>
-                    <button onclick="app.addQuestionToQueue()" class="bg-green-800 text-white text-xs px-4 rounded hover:bg-green-700">ADD</button>
+                    <button onclick="app.commitQuestionToEditor()" id="btnCommitQ" class="bg-green-800 text-white text-xs px-4 rounded hover:bg-green-700">ADD Q</button>
                 </div>
             </div>
-            <div class="flex-1 overflow-y-auto mb-4 border border-green-900/50 rounded bg-black/20 p-2">
-                <h3 class="text-xs text-green-600 mb-2">DATABASE QUEUE: <span id="qCount">0</span></h3>
-                <div id="questionsPreview" class="space-y-2 text-xs"></div>
+
+            <div class="flex-1 overflow-y-auto mb-2 border border-green-900/50 rounded bg-black/20 p-2" id="editorPreview">
+                <!-- Preview of added questions -->
             </div>
-            <div class="grid grid-cols-2 gap-3 mt-auto">
-                <button onclick="app.loadDemoData()" class="py-3 border border-yellow-700 text-yellow-500 text-xs rounded hover:bg-yellow-900/20">
-                    <i class="fas fa-bolt mr-1"></i> LOAD SIMULATION
-                </button>
-                <button onclick="app.initializeHeist()" class="py-3 bg-green-600 text-slate-900 font-bold text-xs rounded hover:bg-green-500 shadow-lg shadow-green-900/40">
-                    <i class="fas fa-fingerprint mr-1"></i> INITIALIZE HEIST
-                </button>
-            </div>
-            <button onclick="app.viewHistory()" class="mt-3 w-full py-3 border border-green-600 text-green-500 font-bold text-xs rounded hover:bg-green-900/30 transition-all flex justify-center items-center gap-2">
-                <i class="fas fa-history"></i> ARCHIVED MISSION LOGS
-            </button>
+
+            <button onclick="app.showView('view-teacher-library')" class="py-2 border border-red-900 text-red-500 text-xs rounded hover:bg-red-900/20">CANCEL EDIT</button>
         </div>
 
         <!-- VIEW: TEACHER HISTORY -->
         <div id="view-teacher-history" class="hidden flex flex-col h-full p-4">
             <h2 class="text-lg font-bold text-yellow-500 border-b border-yellow-800 pb-1 mb-4 text-center">ARCHIVED LOGS</h2>
-            <div class="flex-1 overflow-y-auto space-y-2" id="historyList">
-                <div class="text-center text-xs text-green-500 animate-pulse">DECRYPTING ARCHIVES...</div>
-            </div>
-            <button onclick="app.showView('view-teacher-setup')" class="mt-4 py-3 border border-green-700 text-green-500 text-xs rounded hover:bg-green-900/20">
-                RETURN TO SETUP
-            </button>
+            <div class="flex-1 overflow-y-auto space-y-2" id="historyList"></div>
+            <button onclick="app.showView('view-teacher-library')" class="mt-4 py-3 border border-green-700 text-green-500 text-xs rounded hover:bg-green-900/20">RETURN TO CONTROL</button>
         </div>
 
         <!-- VIEW: TEACHER DASHBOARD (LIVE) -->
@@ -205,7 +236,7 @@
                 </button>
                 <div class="flex justify-between mt-2 text-[10px] text-green-800 font-bold">
                     <span>Q: <span id="currentQIndexDisplay">0</span> / <span id="totalQDisplay">0</span></span>
-                    <span id="actionRequiredDisplay" class="text-green-500">WAITING FOR TEAMS...</span>
+                    <span id="actionRequiredDisplay" class="text-green-500">WAITING...</span>
                 </div>
             </div>
             <h3 class="text-xs text-green-600 mb-2 font-bold uppercase border-b border-green-900 pb-1 flex justify-between">
@@ -418,7 +449,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getFirestore, collection, doc, setDoc, getDoc, onSnapshot, updateDoc, increment, arrayUnion, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getFirestore, collection, doc, setDoc, getDoc, onSnapshot, updateDoc, increment, arrayUnion, query, where, getDocs, addDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
         import { getAuth, signInAnonymously, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
         const firebaseConfig = {
@@ -436,27 +467,26 @@
 
         window.app = {
             state: {
-                role: null, gameId: null, userId: null, questions: [], 
+                role: null, gameId: null, userId: null, 
                 playerData: {}, gameData: {}, hasAnswered: false, currentWager: 0, 
                 timerInterval: null, playerSnapshots: [], teacherTimerInterval: null,
-                isTeacher: false
+                isTeacher: false,
+                // Library State
+                editorQuestions: [], currentBriefingStep: 0, 
+                editingMissionId: null, editingQuestionIndex: -1
             },
             
             dom: {},
 
             async init() {
                 document.getElementById('connectionStatus').textContent = "WAITING FOR UPLINK...";
-                
-                // Real-time auth listener
                 onAuthStateChanged(auth, (user) => {
                     if (user) {
                         this.state.userId = user.uid;
-                        this.state.isTeacher = !user.isAnonymous; // Heuristic: Email users are teachers
-                        
+                        this.state.isTeacher = !user.isAnonymous;
                         document.getElementById('connectionStatus').textContent = this.state.isTeacher ? "OVERSEER CONNECTED" : "CREW LINKED";
                         document.getElementById('connectionStatus').className = "text-[10px] text-green-500 font-bold";
                     } else {
-                        // Signed out
                         document.getElementById('connectionStatus').textContent = "NO CONNECTION";
                         this.state.userId = null;
                         this.state.isTeacher = false;
@@ -464,13 +494,12 @@
                 });
             },
 
-            // --- NOTIFICATION SYSTEM ---
+            // --- NOTIFICATIONS ---
             showNotification(msg) {
                 const overlay = document.getElementById('modal-overlay');
                 document.getElementById('modal-title').textContent = "SYSTEM ALERT";
                 document.getElementById('modal-msg').textContent = msg;
                 document.getElementById('modal-icon').className = "fas fa-info-circle text-4xl mb-4 text-green-500";
-                
                 overlay.classList.remove('hidden');
                 document.getElementById('modal-btn-ok').classList.remove('hidden');
                 document.getElementById('modal-btns-confirm').classList.add('hidden');
@@ -482,20 +511,15 @@
                 document.getElementById('modal-title').textContent = "WARNING: ACTION REQUIRED";
                 document.getElementById('modal-msg').textContent = msg;
                 document.getElementById('modal-icon').className = "fas fa-exclamation-triangle text-4xl mb-4 text-yellow-500";
-                
                 overlay.classList.remove('hidden');
                 document.getElementById('modal-btn-ok').classList.add('hidden');
                 document.getElementById('modal-btns-confirm').classList.remove('hidden');
-                
-                document.getElementById('modal-btn-yes').onclick = () => {
-                    overlay.classList.add('hidden');
-                    onYes();
-                };
+                document.getElementById('modal-btn-yes').onclick = () => { overlay.classList.add('hidden'); onYes(); };
                 document.getElementById('modal-btn-cancel').onclick = () => overlay.classList.add('hidden');
             },
 
             showView(id) {
-                ['view-landing', 'view-teacher-login', 'view-teacher-setup', 'view-teacher-dash', 'view-teacher-report', 'view-teacher-history', 'view-student-login', 'view-student-game'].forEach(v => {
+                ['view-landing', 'view-teacher-login', 'view-teacher-library', 'view-teacher-editor', 'view-teacher-dash', 'view-teacher-report', 'view-teacher-history', 'view-student-login', 'view-student-game'].forEach(v => {
                     document.getElementById(v).classList.add('hidden');
                 });
                 document.getElementById(id).classList.remove('hidden');
@@ -512,12 +536,11 @@
             showTeacherLogin() { this.showView('view-teacher-login'); },
             showStudentLogin() { this.showView('view-student-login'); },
 
-            // --- AUTH LOGIC (Updated) ---
-            
+            // --- AUTH ---
             checkTeacherStatus() {
                 if (auth.currentUser && !auth.currentUser.isAnonymous) {
                     this.state.role = 'teacher';
-                    this.showView('view-teacher-setup');
+                    this.loadLibrary(); // New: Load Library
                 } else {
                     this.showView('view-teacher-login');
                 }
@@ -527,11 +550,10 @@
                 const email = document.getElementById('adminEmail').value;
                 const pass = document.getElementById('adminPass').value;
                 if (!email || !pass) return this.showNotification("ENTER CREDENTIALS");
-
                 try {
                     await signInWithEmailAndPassword(auth, email, pass);
                     this.state.role = 'teacher';
-                    this.showView('view-teacher-setup');
+                    this.loadLibrary();
                 } catch (error) {
                     this.showNotification("AUTH FAILED: " + error.code);
                 }
@@ -541,79 +563,196 @@
                 const email = document.getElementById('adminEmail').value;
                 const pass = document.getElementById('adminPass').value;
                 if (!email || !pass) return this.showNotification("ENTER CREDENTIALS");
-
                 try {
                     await createUserWithEmailAndPassword(auth, email, pass);
                     this.state.role = 'teacher';
-                    this.showView('view-teacher-setup');
+                    this.loadLibrary();
                     this.showNotification("ID CREATED. WELCOME OVERSEER.");
                 } catch (error) {
                     this.showNotification("REGISTRATION FAILED: " + error.code);
                 }
             },
 
-            async logout() {
-                await signOut(auth);
-                window.location.reload();
-            },
+            async logout() { await signOut(auth); window.location.reload(); },
 
             async startStudentFlow() {
-                // If not signed in or is signed in as teacher (shouldn't happen on same device ideally but good to handle)
-                if (!auth.currentUser) {
-                    await signInAnonymously(auth);
-                }
-                // If user is teacher, they should logout first, but we'll assume crew button means crew intention
+                if (!auth.currentUser) await signInAnonymously(auth);
                 this.showView('view-student-login');
             },
 
-            // --- GAME LOGIC ---
+            // --- NEW: MISSION LIBRARY SYSTEM ---
+            
+            async loadLibrary() {
+                this.showView('view-teacher-library');
+                const list = document.getElementById('missionList');
+                list.innerHTML = '<div class="text-center text-xs text-green-500 animate-pulse">ACCESSING MAINFRAME...</div>';
+                
+                try {
+                    const q = query(collection(db, `users/${auth.currentUser.uid}/missions`));
+                    const snap = await getDocs(q);
+                    
+                    list.innerHTML = '';
+                    if(snap.empty) {
+                        list.innerHTML = '<div class="text-center text-gray-500 text-xs mt-4">NO MISSIONS FOUND.<br>CREATE ONE TO BEGIN.</div>';
+                    }
 
-            addQuestionToQueue(qData = null) {
-                const q = qData || {
-                    text: document.getElementById('setupQ').value,
-                    options: {
-                        A: document.getElementById('setupA').value,
-                        B: document.getElementById('setupB').value,
-                        C: document.getElementById('setupC').value,
-                        D: document.getElementById('setupD').value
-                    },
-                    correct: document.getElementById('setupCorrect').value
-                };
-                if(!q.text) return;
-                this.state.questions.push(q);
-                this.renderQuestionQueue();
-                if(!qData) {
-                    document.getElementById('setupQ').value = '';
-                    document.getElementById('setupA').value = '';
-                    document.getElementById('setupB').value = '';
-                    document.getElementById('setupC').value = '';
-                    document.getElementById('setupD').value = '';
+                    snap.forEach(d => {
+                        const m = d.data();
+                        const div = document.createElement('div');
+                        div.className = "bg-slate-900 border border-green-800 p-3 rounded flex justify-between items-center hover:bg-slate-800 mb-2";
+                        div.innerHTML = `
+                            <div onclick="app.initializeHeistFromLibrary('${d.id}')" class="cursor-pointer flex-1">
+                                <div class="font-bold text-green-400">${m.title}</div>
+                                <div class="text-[10px] text-gray-500">${m.questions.length} Questions</div>
+                            </div>
+                            <div class="flex gap-2">
+                                <button onclick="app.editMission('${d.id}')" class="text-yellow-500 hover:text-yellow-400 px-2"><i class="fas fa-edit"></i></button>
+                                <button onclick="app.deleteMission('${d.id}')" class="text-red-500 hover:text-red-400 px-2"><i class="fas fa-trash"></i></button>
+                                <button onclick="app.initializeHeistFromLibrary('${d.id}')" class="bg-green-700 text-white text-xs px-3 py-1 rounded hover:bg-green-600 font-bold ml-1">START</button>
+                            </div>
+                        `;
+                        list.appendChild(div);
+                    });
+                } catch (e) {
+                    console.error(e);
+                    list.innerHTML = '<div class="text-red-500 text-center">DATABASE ERROR</div>';
                 }
             },
 
-            loadDemoData() {
-                const demos = [
-                    { text: "Which element is the primary component of the sun?", options: { A: "Oxygen", B: "Hydrogen", C: "Carbon", D: "Iron" }, correct: "B" },
-                    { text: "In economics, what does GDP stand for?", options: { A: "Global Domestic Product", B: "Gross Domestic Product", C: "General Dollar Price", D: "Gross Dollar Profit" }, correct: "B" },
-                    { text: "Which planet in our solar system has the most gravity?", options: { A: "Jupiter", B: "Earth", C: "Saturn", D: "Neptune" }, correct: "A" },
-                    { text: "What is the powerhouse of the cell?", options: { A: "Nucleus", B: "Mitochondria", C: "Ribosome", D: "Cytoplasm" }, correct: "B" },
-                    { text: "Who painted the Starry Night?", options: { A: "Da Vinci", B: "Picasso", C: "Van Gogh", D: "Monet" }, correct: "C" }
-                ];
-                demos.forEach(d => this.addQuestionToQueue(d));
+            // --- MISSION EDITOR ---
+            openEditor() {
+                this.state.editorQuestions = [];
+                this.state.editingMissionId = null;
+                this.state.editingQuestionIndex = -1;
+                document.getElementById('missionTitle').value = "";
+                document.getElementById('btnCommitQ').textContent = "ADD Q";
+                document.getElementById('editingIndicator').classList.add('hidden');
+                this.renderEditorPreview();
+                this.showView('view-teacher-editor');
             },
 
-            renderQuestionQueue() {
-                const div = document.getElementById('questionsPreview');
-                document.getElementById('qCount').textContent = this.state.questions.length;
-                div.innerHTML = this.state.questions.map((q, i) => `
-                    <div class="bg-slate-800 p-2 rounded mb-1 border-l-2 border-green-600">
-                        <span class="font-bold text-green-400">Q${i+1}:</span> ${q.text.substring(0, 30)}...
+            async editMission(id) {
+                // Load mission data first
+                try {
+                    const docSnap = await getDoc(doc(db, `users/${auth.currentUser.uid}/missions`, id));
+                    if (docSnap.exists()) {
+                        const m = docSnap.data();
+                        this.state.editorQuestions = m.questions || [];
+                        this.state.editingMissionId = id;
+                        this.state.editingQuestionIndex = -1;
+                        document.getElementById('missionTitle').value = m.title;
+                        document.getElementById('btnCommitQ').textContent = "ADD Q";
+                        document.getElementById('editingIndicator').classList.add('hidden');
+                        this.renderEditorPreview();
+                        this.showView('view-teacher-editor');
+                    }
+                } catch(e) { this.showNotification("LOAD ERROR"); }
+            },
+
+            async deleteMission(id) {
+                this.showConfirm("PERMANENTLY DELETE THIS MISSION?", async () => {
+                    await deleteDoc(doc(db, `users/${auth.currentUser.uid}/missions`, id));
+                    this.loadLibrary();
+                });
+            },
+
+            loadQuestionIntoInputs(index) {
+                const q = this.state.editorQuestions[index];
+                document.getElementById('editQ').value = q.text;
+                document.getElementById('editA').value = q.options.A;
+                document.getElementById('editB').value = q.options.B;
+                document.getElementById('editC').value = q.options.C;
+                document.getElementById('editD').value = q.options.D;
+                document.getElementById('editCorrect').value = q.correct;
+                
+                this.state.editingQuestionIndex = index;
+                document.getElementById('btnCommitQ').textContent = "UPDATE Q";
+                document.getElementById('editingIndicator').classList.remove('hidden');
+            },
+
+            deleteQuestionFromEditor(index, e) {
+                e.stopPropagation(); // Prevent clicking row
+                this.state.editorQuestions.splice(index, 1);
+                this.renderEditorPreview();
+            },
+
+            commitQuestionToEditor() {
+                const q = {
+                    text: document.getElementById('editQ').value,
+                    options: {
+                        A: document.getElementById('editA').value,
+                        B: document.getElementById('editB').value,
+                        C: document.getElementById('editC').value,
+                        D: document.getElementById('editD').value
+                    },
+                    correct: document.getElementById('editCorrect').value
+                };
+                if(!q.text) return;
+
+                if (this.state.editingQuestionIndex >= 0) {
+                    // Update existing
+                    this.state.editorQuestions[this.state.editingQuestionIndex] = q;
+                    this.state.editingQuestionIndex = -1;
+                    document.getElementById('btnCommitQ').textContent = "ADD Q";
+                    document.getElementById('editingIndicator').classList.add('hidden');
+                } else {
+                    // Add new
+                    this.state.editorQuestions.push(q);
+                }
+                
+                this.renderEditorPreview();
+                // Clear inputs
+                ['editQ','editA','editB','editC','editD'].forEach(id => document.getElementById(id).value = '');
+            },
+
+            renderEditorPreview() {
+                const div = document.getElementById('editorPreview');
+                div.innerHTML = this.state.editorQuestions.map((q, i) => `
+                    <div onclick="app.loadQuestionIntoInputs(${i})" class="bg-slate-800 p-2 rounded mb-1 border-l-2 border-green-600 text-xs flex justify-between items-center cursor-pointer hover:bg-slate-700">
+                        <span><span class="font-bold text-green-400">Q${i+1}:</span> ${q.text.substring(0, 30)}...</span>
+                        <button onclick="app.deleteQuestionFromEditor(${i}, event)" class="text-red-500 hover:text-red-300"><i class="fas fa-times"></i></button>
                     </div>
                 `).join('');
             },
 
-            async initializeHeist() {
-                if(this.state.questions.length === 0) return this.showNotification("DATABASE EMPTY. ADD QUESTIONS FIRST.");
+            async saveMission() {
+                const title = document.getElementById('missionTitle').value || "Untitled Mission";
+                if(this.state.editorQuestions.length === 0) return this.showNotification("ADD QUESTIONS FIRST");
+                
+                try {
+                    const data = {
+                        title: title,
+                        questions: this.state.editorQuestions,
+                        created: Date.now()
+                    };
+
+                    if (this.state.editingMissionId) {
+                        // Update
+                        await setDoc(doc(db, `users/${auth.currentUser.uid}/missions`, this.state.editingMissionId), data);
+                    } else {
+                        // Create
+                        await addDoc(collection(db, `users/${auth.currentUser.uid}/missions`), data);
+                    }
+                    
+                    this.showNotification("MISSION SAVED TO LIBRARY");
+                    this.loadLibrary();
+                } catch(e) {
+                    this.showNotification("SAVE FAILED");
+                }
+            },
+
+            // --- GAME START ---
+            async initializeHeistFromLibrary(missionId) {
+                // Fetch full mission first
+                const docSnap = await getDoc(doc(db, `users/${auth.currentUser.uid}/missions`, missionId));
+                if(docSnap.exists()) {
+                    const m = docSnap.data();
+                    this.initializeHeist(m.questions);
+                }
+            },
+
+            async initializeHeist(questions) {
+                if(!questions || questions.length === 0) return;
                 
                 // Ensure we have a valid teacher ID
                 if (!auth.currentUser || auth.currentUser.isAnonymous) {
@@ -624,9 +763,9 @@
                 
                 await setDoc(doc(db, "sessions", this.state.gameId), {
                     created: Date.now(),
-                    teacherId: auth.currentUser.uid, // PERSISTENT ID
+                    teacherId: auth.currentUser.uid, 
                     phase: 'LOBBY',
-                    questionList: this.state.questions,
+                    questionList: questions,
                     currentQIndex: -1,
                     currentQ: null,
                     startTime: 0,
@@ -634,65 +773,116 @@
                 });
                 
                 document.getElementById('displayCode').textContent = this.state.gameId;
-                document.getElementById('totalQDisplay').textContent = this.state.questions.length;
+                document.getElementById('totalQDisplay').textContent = questions.length;
                 this.showView('view-teacher-dash');
                 this.monitorPlayers();
                 this.monitorGame();
                 this.startTeacherTimerSync(); 
             },
 
-            async viewHistory() {
-                // Check auth
-                if (!auth.currentUser || auth.currentUser.isAnonymous) {
-                    return this.showNotification("AUTH REQUIRED TO ACCESS ARCHIVES");
-                }
+            // --- STUDENT BRIEFING LOGIC ---
+            briefingSteps: [
+                { title: "OBJECTIVE", content: "Become the richest crew.<br><br>Rank is based on <b>NET WORTH</b>:<br>(Cash + Assets) - Debt." },
+                { title: "PROTOCOL 1: WAGER", content: "Before every hack, you must bet cash.<br>High Confidence? <b>Bet BIG.</b><br>Unsure? <b>Bet Small (25%).</b><br>Wrong answer = Lose bet." },
+                { title: "PROTOCOL 2: DECAY", content: "Speed is money.<br>0-5s: <b>2.5x Payout</b><br>5-10s: <b>1.5x Payout</b><br>10s+: <b>1.0x Payout</b>" },
+                { title: "PROTOCOL 3: ASSETS", content: "Between rounds, the Black Market opens.<br>Buy <b>KEYS</b> to secure wealth.<br>Keys can never be lost. Cash can." },
+                { title: "PROTOCOL 4: DEBT", content: "Bankrupt? Visit the Loan Shark.<br>Get $500, but take <b>1 DEBT TOKEN</b>.<br>Each token removes <b>20%</b> of your final score." }
+            ],
 
+            showBriefing() {
+                this.state.currentBriefingStep = 0;
+                document.getElementById('briefing-modal').classList.remove('hidden');
+                this.renderBriefingSlide();
+            },
+
+            renderBriefingSlide() {
+                const slide = this.briefingSteps[this.state.currentBriefingStep];
+                const contentDiv = document.getElementById('briefing-content');
+                
+                contentDiv.innerHTML = `
+                    <div class="text-center animate-pulse mb-4">
+                        <i class="fas fa-file-contract text-4xl text-green-500"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-white mb-2 text-center">${slide.title}</h3>
+                    <p class="text-gray-300 text-center leading-relaxed">${slide.content}</p>
+                    <div class="flex justify-center gap-1 mt-4">
+                        ${this.briefingSteps.map((_, i) => `<div class="w-2 h-2 rounded-full ${i === this.state.currentBriefingStep ? 'bg-green-500' : 'bg-green-900'}"></div>`).join('')}
+                    </div>
+                `;
+
+                // Button Logic
+                const nextBtn = document.getElementById('btn-next-briefing');
+                if (this.state.currentBriefingStep === this.briefingSteps.length - 1) {
+                    nextBtn.textContent = "I'M READY";
+                    nextBtn.className = "flex-1 py-2 bg-yellow-600 text-slate-900 font-bold rounded hover:bg-yellow-500 animate-pulse";
+                    nextBtn.onclick = () => {
+                        document.getElementById('briefing-modal').classList.add('hidden');
+                        // No join logic needed here, already joined
+                    };
+                } else {
+                    nextBtn.textContent = "NEXT";
+                    nextBtn.className = "flex-1 py-2 bg-green-700 text-slate-900 font-bold rounded hover:bg-green-600";
+                    nextBtn.onclick = () => this.nextBriefing();
+                }
+                
+                document.getElementById('btn-prev-briefing').disabled = this.state.currentBriefingStep === 0;
+            },
+
+            nextBriefing() {
+                if(this.state.currentBriefingStep < this.briefingSteps.length - 1) {
+                    this.state.currentBriefingStep++;
+                    this.renderBriefingSlide();
+                }
+            },
+
+            prevBriefing() {
+                if(this.state.currentBriefingStep > 0) {
+                    this.state.currentBriefingStep--;
+                    this.renderBriefingSlide();
+                }
+            },
+
+            // --- EXISTING LOGIC WITH UPDATES ---
+
+            async viewHistory() {
+                if (!auth.currentUser || auth.currentUser.isAnonymous) return this.showNotification("AUTH REQUIRED");
                 this.showView('view-teacher-history');
                 const list = document.getElementById('historyList');
                 list.innerHTML = '<div class="text-center text-xs text-green-500 animate-pulse">DECRYPTING ARCHIVES...</div>';
-                
                 try {
                     const q = query(collection(db, "sessions"), where("teacherId", "==", auth.currentUser.uid));
                     const snap = await getDocs(q);
-                    
-                    if(snap.empty) {
-                        list.innerHTML = '<div class="text-center text-gray-500">NO ARCHIVED RECORDS FOUND</div>';
-                        return;
-                    }
-
                     list.innerHTML = '';
+                    if(snap.empty) { list.innerHTML = '<div class="text-center text-gray-500">NO RECORDS</div>'; return; }
                     snap.forEach(d => {
                         const data = d.data();
                         const date = new Date(data.created).toLocaleString();
                         const div = document.createElement('div');
-                        div.className = "bg-slate-900 border border-green-800 p-3 rounded flex justify-between items-center hover:bg-slate-800 cursor-pointer";
-                        div.onclick = () => this.loadPastGameReport(d.id, data);
+                        div.className = "bg-slate-900 border border-green-800 p-3 rounded flex justify-between items-center hover:bg-slate-800 mb-2";
                         div.innerHTML = `
-                            <div>
-                                <div class="font-bold text-green-400">MISSION ID: ${d.id}</div>
+                            <div onclick="app.loadPastGameReport('${d.id}')" class="cursor-pointer flex-1">
+                                <div class="font-bold text-green-400">${d.id}</div>
                                 <div class="text-[10px] text-gray-500">${date}</div>
                             </div>
-                            <div class="text-right">
-                                <div class="text-xs text-yellow-500">STATUS: ${data.phase}</div>
-                            </div>
+                            <button onclick="app.deleteArchiveLog('${d.id}')" class="text-red-500 hover:text-red-400 px-2"><i class="fas fa-trash"></i></button>
                         `;
                         list.appendChild(div);
                     });
-                } catch (e) {
-                    console.error(e);
-                    list.innerHTML = '<div class="text-center text-red-500">ARCHIVE ACCESS ERROR</div>';
-                }
+                } catch (e) { list.innerHTML = '<div class="text-center text-red-500">ERROR</div>'; }
+            },
+
+            async deleteArchiveLog(gameId) {
+                this.showConfirm("DELETE THIS LOG PERMANENTLY?", async () => {
+                    await deleteDoc(doc(db, "sessions", gameId));
+                    this.viewHistory(); // Refresh
+                });
             },
 
             async loadPastGameReport(gameId, data) {
                 const q = collection(db, `sessions/${gameId}/players`);
                 const snap = await getDocs(q);
                 this.state.playerSnapshots = [];
-                snap.forEach(d => {
-                    const p = d.data();
-                    p.id = d.id;
-                    this.state.playerSnapshots.push(p);
-                });
+                snap.forEach(d => { const p = d.data(); p.id = d.id; this.state.playerSnapshots.push(p); });
                 this.renderTeacherReport(true); 
             },
 
@@ -701,81 +891,34 @@
                     const div = document.getElementById('teacherLeaderboard');
                     div.innerHTML = '';
                     this.state.playerSnapshots = [];
-                    
-                    let betCount = 0;
-                    let answerCount = 0;
-                    
+                    let betCount = 0; let answerCount = 0;
                     const phase = this.state.gameData?.phase || 'LOBBY';
 
                     snap.forEach(d => {
                         const p = d.data();
                         p.id = d.id;
                         this.state.playerSnapshots.push(p);
-
-                        let statusHtml = '';
-                        let statusColor = 'text-gray-500';
-                        
-                        if(p.wager > 0) {
-                            betCount++;
-                        }
-                        if(p.lastAnswer) {
-                            answerCount++;
-                        }
+                        let statusHtml = '', statusColor = 'text-gray-500';
+                        if(p.wager > 0) betCount++;
+                        if(p.lastAnswer) answerCount++;
 
                         if (phase === 'BETTING') {
-                            if (p.wager > 0) {
-                                statusHtml = `<i class="fas fa-lock text-green-500"></i> BET LOCKED`;
-                                statusColor = 'text-green-500';
-                            } else {
-                                statusHtml = `deciding...`;
-                                statusColor = 'text-yellow-600 animate-pulse';
-                            }
+                            if (p.wager > 0) { statusHtml = `<i class="fas fa-lock text-green-500"></i> BET LOCKED`; statusColor = 'text-green-500'; }
+                            else { statusHtml = `deciding...`; statusColor = 'text-yellow-600 animate-pulse'; }
                         } 
                         else if (phase === 'QUESTION') {
-                            if (p.lastAnswer) {
-                                statusHtml = `<i class="fas fa-check-circle text-green-500"></i> ANSWERED`;
-                                statusColor = 'text-green-500';
-                            } else {
-                                statusHtml = `THINKING...`;
-                                statusColor = 'text-yellow-600 animate-pulse';
-                            }
+                            if (p.lastAnswer) { statusHtml = `<i class="fas fa-check-circle text-green-500"></i> ANSWERED`; statusColor = 'text-green-500'; }
+                            else { statusHtml = `THINKING...`; statusColor = 'text-yellow-600 animate-pulse'; }
                         }
-                        else if (phase === 'SHOP' || phase === 'LOBBY') {
-                             statusHtml = `READY`;
-                        }
-                        else {
-                             statusHtml = `standby`;
-                        }
-
+                        
                         const keyIcons = (p.keys || []).map(() => '<i class="fas fa-key text-yellow-500 text-[10px]"></i>').join(' ');
-
-                        div.innerHTML += `
-                            <div class="flex justify-between items-center bg-slate-800 p-2 rounded mb-2 border border-slate-700">
-                                <div class="w-1/3">
-                                    <div class="font-bold text-white text-sm truncate">${p.name}</div>
-                                    <div class="text-[10px] ${p.debt > 0 ? 'text-red-500' : 'text-gray-500'}">DEBT: $${p.debt * 500}</div>
-                                </div>
-                                <div class="w-1/3 text-center">
-                                    <div class="text-[10px] font-bold ${statusColor}">${statusHtml}</div>
-                                </div>
-                                <div class="w-1/3 text-right">
-                                    <div class="font-bold text-green-400">$${p.cash}</div>
-                                    <div class="mt-1">${keyIcons}</div>
-                                </div>
-                            </div>
-                        `;
+                        div.innerHTML += `<div class="flex justify-between items-center bg-slate-800 p-2 rounded mb-2 border border-slate-700"><div class="w-1/3"><div class="font-bold text-white text-sm truncate">${p.name}</div><div class="text-[10px] ${p.debt > 0 ? 'text-red-500' : 'text-gray-500'}">DEBT: $${p.debt * 500}</div></div><div class="w-1/3 text-center"><div class="text-[10px] font-bold ${statusColor}">${statusHtml}</div></div><div class="w-1/3 text-right"><div class="font-bold text-green-400">$${p.cash}</div><div class="mt-1">${keyIcons}</div></div></div>`;
                     });
                     
                     const actionDisplay = document.getElementById('actionRequiredDisplay');
-                    if (phase === 'BETTING') {
-                        actionDisplay.textContent = `BETS: ${betCount}/${snap.size}`;
-                        actionDisplay.className = betCount === snap.size ? "text-green-500 font-bold" : "text-yellow-500 font-bold";
-                    } else if (phase === 'QUESTION') {
-                         actionDisplay.textContent = `ANSWERS: ${answerCount}/${snap.size}`;
-                         actionDisplay.className = answerCount === snap.size ? "text-green-500 font-bold" : "text-yellow-500 font-bold";
-                    } else {
-                        actionDisplay.textContent = "";
-                    }
+                    if (phase === 'BETTING') { actionDisplay.textContent = `BETS: ${betCount}/${snap.size}`; actionDisplay.className = betCount === snap.size ? "text-green-500 font-bold" : "text-yellow-500 font-bold"; }
+                    else if (phase === 'QUESTION') { actionDisplay.textContent = `ANSWERS: ${answerCount}/${snap.size}`; actionDisplay.className = answerCount === snap.size ? "text-green-500 font-bold" : "text-yellow-500 font-bold"; }
+                    else { actionDisplay.textContent = ""; }
                 });
             },
 
@@ -786,36 +929,19 @@
                     this.state.gameData = data;
                     document.getElementById('gameStatusDisplay').textContent = data.phase;
                     document.getElementById('currentQIndexDisplay').textContent = (data.currentQIndex + 1);
-
                     const btn = document.getElementById('mainControlBtn');
                     const timerContainer = document.getElementById('teacherTimerContainer');
-                    
                     timerContainer.classList.add('hidden');
 
-                    if(data.phase === 'LOBBY') {
-                        btn.textContent = "OPEN FIRST BETTING";
-                    }
-                    else if(data.phase === 'BETTING') {
-                        btn.textContent = "REVEAL QUESTION";
-                    }
-                    else if(data.phase === 'QUESTION') {
-                        btn.textContent = "SHOW RESULTS";
+                    if(data.phase === 'LOBBY') btn.textContent = "OPEN FIRST BETTING";
+                    else if(data.phase === 'BETTING') btn.textContent = "REVEAL QUESTION";
+                    else if(data.phase === 'QUESTION') { btn.textContent = "SHOW RESULTS"; timerContainer.classList.remove('hidden'); }
+                    else if(data.phase === 'RESULT') btn.textContent = "OPEN BLACK MARKET";
+                    else if(data.phase === 'SHOP') { 
                         timerContainer.classList.remove('hidden');
+                        btn.textContent = data.currentQIndex >= data.questionList.length - 1 ? "END HEIST (GAME OVER)" : "NEXT ROUND (BETTING)";
                     }
-                    else if(data.phase === 'RESULT') {
-                        btn.textContent = "OPEN BLACK MARKET";
-                    }
-                    else if(data.phase === 'SHOP') {
-                        timerContainer.classList.remove('hidden');
-                        if(data.currentQIndex >= data.questionList.length - 1) {
-                            btn.textContent = "END HEIST (GAME OVER)";
-                        } else {
-                            btn.textContent = "NEXT ROUND (BETTING)";
-                        }
-                    }
-                    else if(data.phase === 'GAME_OVER') {
-                        if(this.state.role === 'teacher') this.renderTeacherReport();
-                    }
+                    else if(data.phase === 'GAME_OVER') { if(this.state.role === 'teacher') this.renderTeacherReport(); }
                     
                     if(this.state.role === 'student') this.handleStudentState(data);
                 });
@@ -826,18 +952,14 @@
                 this.state.teacherTimerInterval = setInterval(() => {
                     const data = this.state.gameData;
                     if (!data) return;
-                    
                     const el = document.getElementById('teacherTimerDisplay');
                     const now = Date.now();
-                    
                     if (data.phase === 'QUESTION') {
                         const elapsed = now - data.startTime;
                         const remaining = Math.max(0, 20000 - elapsed);
                         el.textContent = Math.ceil(remaining/1000) + "s";
-                        // Alarm color logic restored
                         el.className = remaining < 6000 ? "text-lg font-bold text-red-500 font-mono animate-pulse" : "text-lg font-bold text-white font-mono";
-                    } 
-                    else if (data.phase === 'SHOP') {
+                    } else if (data.phase === 'SHOP') {
                         const elapsed = now - (data.shopStartTime || 0);
                         const remaining = Math.max(0, 10000 - elapsed);
                         el.textContent = Math.ceil(remaining/1000) + "s";
@@ -850,13 +972,7 @@
                 const q = query(collection(db, `sessions/${this.state.gameId}/players`));
                 const snap = await getDocs(q);
                 const updates = [];
-                snap.forEach(d => {
-                    updates.push(updateDoc(doc(db, `sessions/${this.state.gameId}/players`, d.id), {
-                        wager: 0,
-                        lastAnswer: null,
-                        lastMultiplier: 1.0
-                    }));
-                });
+                snap.forEach(d => { updates.push(updateDoc(doc(db, `sessions/${this.state.gameId}/players`, d.id), { wager: 0, lastAnswer: null, lastMultiplier: 1.0 })); });
                 await Promise.all(updates);
             },
 
@@ -864,100 +980,48 @@
                 const data = this.state.gameData;
                 let nextPhase = 'LOBBY';
                 let updates = {};
-
-                if (data.phase === 'LOBBY') {
-                    nextPhase = 'BETTING';
-                    updates = { currentQIndex: 0, phase: nextPhase };
-                    this.resetRoundState(); 
-                } 
-                else if (data.phase === 'BETTING') {
-                    nextPhase = 'QUESTION';
-                    const qData = data.questionList[data.currentQIndex];
-                    updates = { phase: nextPhase, currentQ: qData, startTime: Date.now() };
-                }
-                else if (data.phase === 'QUESTION') {
-                    nextPhase = 'RESULT';
-                    updates = { phase: nextPhase };
-                }
-                else if (data.phase === 'RESULT') {
-                    nextPhase = 'SHOP';
-                    updates = { phase: nextPhase, shopStartTime: Date.now() }; 
-                }
+                if (data.phase === 'LOBBY') { nextPhase = 'BETTING'; updates = { currentQIndex: 0, phase: nextPhase }; this.resetRoundState(); } 
+                else if (data.phase === 'BETTING') { nextPhase = 'QUESTION'; const qData = data.questionList[data.currentQIndex]; updates = { phase: nextPhase, currentQ: qData, startTime: Date.now() }; }
+                else if (data.phase === 'QUESTION') { nextPhase = 'RESULT'; updates = { phase: nextPhase }; }
+                else if (data.phase === 'RESULT') { nextPhase = 'SHOP'; updates = { phase: nextPhase, shopStartTime: Date.now() }; }
                 else if (data.phase === 'SHOP') {
-                    if (data.currentQIndex < data.questionList.length - 1) {
-                        nextPhase = 'BETTING';
-                        updates = { phase: nextPhase, currentQIndex: increment(1), currentQ: null };
-                        this.resetRoundState();
-                    } else {
-                        nextPhase = 'GAME_OVER';
-                        updates = { phase: nextPhase };
-                        this.finalizeRanks(); 
-                    }
+                    if (data.currentQIndex < data.questionList.length - 1) { nextPhase = 'BETTING'; updates = { phase: nextPhase, currentQIndex: increment(1), currentQ: null }; this.resetRoundState(); } 
+                    else { nextPhase = 'GAME_OVER'; updates = { phase: nextPhase }; this.finalizeRanks(); }
                 }
                 await updateDoc(doc(db, "sessions", this.state.gameId), updates);
             },
 
             async finalizeRanks() {
                 const keyValues = { 'key1': 1500, 'key2': 3000, 'key3': 5000 };
-                
                 const ranked = this.state.playerSnapshots.map(p => {
                     const penaltyPct = Math.min(1, (p.debt || 0) * 0.2);
-                    // Calculate Assets
                     const assets = (p.keys || []).reduce((acc, k) => acc + (keyValues[k] || 0), 0);
                     const netWorth = (p.cash || 0) + assets;
-                    
                     const finalScore = Math.floor(netWorth * (1 - penaltyPct));
                     return { ...p, finalScore };
                 }).sort((a,b) => b.finalScore - a.finalScore);
-
-                ranked.forEach(async (p, index) => {
-                    await updateDoc(doc(db, `sessions/${this.state.gameId}/players`, p.id), {
-                        rank: index + 1,
-                        finalScore: p.finalScore
-                    });
-                });
+                ranked.forEach(async (p, index) => { await updateDoc(doc(db, `sessions/${this.state.gameId}/players`, p.id), { rank: index + 1, finalScore: p.finalScore }); });
             },
 
             renderTeacherReport(isHistory = false) {
                 this.showView('view-teacher-report');
                 const tbody = document.getElementById('reportTableBody');
                 tbody.innerHTML = '';
-                
-                if(isHistory) {
-                    document.getElementById('reportControls').classList.add('hidden');
-                    document.getElementById('historyBackBtn').classList.remove('hidden');
-                } else {
-                    document.getElementById('reportControls').classList.remove('hidden');
-                    document.getElementById('historyBackBtn').classList.add('hidden');
-                }
+                if(isHistory) { document.getElementById('reportControls').classList.add('hidden'); document.getElementById('historyBackBtn').classList.remove('hidden'); } 
+                else { document.getElementById('reportControls').classList.remove('hidden'); document.getElementById('historyBackBtn').classList.add('hidden'); }
 
                 const keyValues = { 'key1': 1500, 'key2': 3000, 'key3': 5000 };
-
                 const ranked = this.state.playerSnapshots.map(p => {
                     const penaltyPct = Math.min(1, (p.debt || 0) * 0.2);
-                    
-                    // Net Worth Logic
                     const assets = (p.keys || []).reduce((acc, k) => acc + (keyValues[k] || 0), 0);
                     const netWorth = (p.cash || 0) + assets;
                     const finalScore = Math.floor(netWorth * (1 - penaltyPct));
-                    
                     return { ...p, penaltyPct, finalScore };
                 }).sort((a,b) => b.finalScore - a.finalScore);
 
                 ranked.forEach((p, i) => {
-                    // Logic for key icons in final report
                     const keyIcons = (p.keys || []).map(() => '<i class="fas fa-key text-yellow-500 text-[10px]"></i>').join(' ');
-                    
-                    tbody.innerHTML += `
-                        <tr class="border-b border-green-900/30">
-                            <td class="p-2 text-white font-mono">#${p.rank || i+1}</td>
-                            <td class="p-2 font-bold">${p.name}</td>
-                            <td class="p-2 text-green-400">$${p.cash}</td>
-                            <td class="p-2 text-yellow-500 text-center">${keyIcons}</td>
-                            <td class="p-2 text-red-400">${p.debt} (-${Math.round(p.penaltyPct * 100)}%)</td>
-                            <td class="p-2 text-right text-yellow-500 font-bold text-lg">${p.finalScore}</td>
-                        </tr>
-                    `;
+                    tbody.innerHTML += `<tr class="border-b border-green-900/30"><td class="p-2 text-white font-mono">#${p.rank || i+1}</td><td class="p-2 font-bold">${p.name}</td><td class="p-2 text-green-400">$${p.cash}</td><td class="p-2 text-yellow-500 text-center">${keyIcons}</td><td class="p-2 text-red-400">${p.debt} (-${Math.round(p.penaltyPct * 100)}%)</td><td class="p-2 text-right text-yellow-500 font-bold text-lg">${p.finalScore}</td></tr>`;
                 });
             },
 
@@ -965,31 +1029,38 @@
                 const code = document.getElementById('joinCode').value;
                 const name = document.getElementById('groupName').value;
                 if(!code || !name) return this.showNotification("MISSING CREDENTIALS");
-                const snap = await getDoc(doc(db, "sessions", code));
+                
+                let uid = this.state.userId;
+                if (!uid) {
+                    if (auth.currentUser) { uid = auth.currentUser.uid; this.state.userId = uid; } 
+                    else {
+                        try { const cred = await signInAnonymously(auth); uid = cred.user.uid; this.state.userId = uid; } 
+                        catch(e) { return this.showNotification("LOGIN ERROR: REFRESH PAGE"); }
+                    }
+                }
+                if (!uid) return this.showNotification("SYSTEM ERROR: NO USER ID");
+
+                let snap;
+                try { snap = await getDoc(doc(db, "sessions", code)); } catch(e) { return this.showNotification("INVALID CODE FORMAT"); }
+
                 if(snap.exists()) {
                     this.state.gameId = code;
                     this.state.role = 'student';
-                    await setDoc(doc(db, `sessions/${code}/players`, this.state.userId), {
-                        name: name, cash: 1000, keys: [], debt: 0, wager: 0, lastAnswer: null
-                    });
+                    await setDoc(doc(db, `sessions/${code}/players`, uid), { name: name, cash: 1000, keys: [], debt: 0, wager: 0, lastAnswer: null });
                     this.showView('view-student-game');
-                    onSnapshot(doc(db, `sessions/${code}/players`, this.state.userId), (d) => {
+                    this.showBriefing();
+                    onSnapshot(doc(db, `sessions/${code}/players`, uid), (d) => {
                         this.state.playerData = d.data();
                         this.updateStudentHUD();
-                        if(d.data().rank) {
-                            document.getElementById('finalRankDisplay').textContent = "#" + d.data().rank;
-                        }
+                        if(d.data() && d.data().rank) document.getElementById('finalRankDisplay').textContent = "#" + d.data().rank;
                     });
                     this.monitorGame(); 
-                } else {
-                    this.showNotification("INVALID VAULT CODE");
-                }
+                } else { this.showNotification("INVALID VAULT CODE"); }
             },
 
             handleStudentState(data) {
                 const phase = data.phase.toLowerCase();
                 if(this.state.timerInterval) clearInterval(this.state.timerInterval); 
-
                 if(phase === 'game_over') { this.showStudentGameOver(); return; }
                 this.showStudentState('state-' + phase);
 
@@ -1001,7 +1072,9 @@
                     ['A','B','C','D'].forEach(k => {
                         const btn = document.getElementById('btn'+k);
                         btn.disabled = false;
-                        btn.className = "btn-press text-left p-4 border border-green-800 bg-slate-900/50 rounded flex items-center hover:bg-green-900/30";
+                        btn.classList.remove('selected-answer');
+                        btn.classList.add('bg-slate-900/50');
+                        btn.classList.remove('bg-yellow-600', 'text-slate-900');
                     });
                 }
                 else if(phase === 'question') {
@@ -1009,13 +1082,8 @@
                     if(this.state.currentWager === 0) this.forceAutoWager();
                     this.startTimer(data.startTime);
                 }
-                else if(phase === 'result') {
-                    this.showResult(data.currentQ.correct);
-                }
-                else if(phase === 'shop') {
-                    this.setupShopUI(); 
-                    this.startShopTimer(data.shopStartTime);
-                }
+                else if(phase === 'result') this.showResult(data.currentQ.correct);
+                else if(phase === 'shop') { this.setupShopUI(); this.startShopTimer(data.shopStartTime); }
             },
 
             async forceAutoWager() {
@@ -1031,20 +1099,14 @@
                 this.showStudentState('state-gameover');
                 const p = this.state.playerData;
                 const penaltyPct = Math.min(1, (p.debt || 0) * 0.2);
-                
-                // Net Worth Calculation for Student View
                 const keyValues = { 'key1': 1500, 'key2': 3000, 'key3': 5000 };
                 const assets = (p.keys || []).reduce((acc, k) => acc + (keyValues[k] || 0), 0);
                 const netWorth = (p.cash || 0) + assets;
                 const finalScore = Math.floor(netWorth * (1 - penaltyPct));
-
                 document.getElementById('endCash').textContent = netWorth;
                 document.getElementById('endPenalty').textContent = Math.round(penaltyPct * 100);
                 document.getElementById('endScore').textContent = finalScore;
-                
-                if(p.rank) {
-                    document.getElementById('finalRankDisplay').textContent = "#" + p.rank;
-                }
+                if(p.rank) document.getElementById('finalRankDisplay').textContent = "#" + p.rank;
             },
 
             renderQuestion(q) {
@@ -1064,19 +1126,9 @@
                     const remaining = Math.max(0, duration - elapsed);
                     const pct = (remaining / duration) * 100;
                     bar.style.width = pct + '%';
-                    if (elapsed < 5000) {
-                        badge.textContent = "2.5x PAYOUT ACTIVE";
-                        badge.className = "bg-purple-600 text-white text-[10px] font-bold px-2 py-1 rounded animate-pulse";
-                        bar.className = "h-full bg-purple-500 absolute top-0 left-0 transition-all duration-100 ease-linear";
-                    } else if (elapsed < 10000) {
-                        badge.textContent = "1.5x PAYOUT";
-                        badge.className = "bg-yellow-600 text-slate-900 text-[10px] font-bold px-2 py-1 rounded";
-                        bar.className = "h-full bg-yellow-500 absolute top-0 left-0 transition-all duration-100 ease-linear";
-                    } else {
-                        badge.textContent = "1.0x STANDARD";
-                        badge.className = "bg-slate-600 text-white text-[10px] font-bold px-2 py-1 rounded";
-                        bar.className = "h-full bg-red-600 absolute top-0 left-0 transition-all duration-100 ease-linear";
-                    }
+                    if (elapsed < 5000) { badge.textContent = "2.5x PAYOUT ACTIVE"; badge.className = "bg-purple-600 text-white text-[10px] font-bold px-2 py-1 rounded animate-pulse"; bar.className = "h-full bg-purple-500 absolute top-0 left-0 transition-all duration-100 ease-linear"; } 
+                    else if (elapsed < 10000) { badge.textContent = "1.5x PAYOUT"; badge.className = "bg-yellow-600 text-slate-900 text-[10px] font-bold px-2 py-1 rounded"; bar.className = "h-full bg-yellow-500 absolute top-0 left-0 transition-all duration-100 ease-linear"; } 
+                    else { badge.textContent = "1.0x STANDARD"; badge.className = "bg-slate-600 text-white text-[10px] font-bold px-2 py-1 rounded"; bar.className = "h-full bg-red-600 absolute top-0 left-0 transition-all duration-100 ease-linear"; }
                     if (pct <= 0) clearInterval(this.state.timerInterval);
                 }, 100);
             },
@@ -1084,43 +1136,23 @@
             setupShopUI() {
                 document.getElementById('shopLockedMsg').classList.add('hidden');
                 const keys = this.state.playerData.keys || [];
-                
                 ['key1', 'key2', 'key3'].forEach(k => {
                     const btn = document.getElementById('btn-'+k);
                     const item = document.getElementById('item-'+k);
-                    btn.disabled = false;
-                    btn.textContent = "BUY";
-                    btn.classList.remove('btn-disabled', 'bg-slate-700', 'text-gray-500');
-                    btn.classList.add('bg-green-800', 'text-white');
-                    item.classList.remove('opacity-50');
-
-                    if (keys.includes(k)) {
-                        btn.disabled = true;
-                        btn.textContent = "OWNED";
-                        btn.classList.remove('bg-green-800', 'text-white');
-                        btn.classList.add('bg-slate-700', 'text-gray-500', 'btn-disabled');
-                        item.classList.add('opacity-50');
-                    }
+                    btn.disabled = false; btn.textContent = "BUY"; btn.classList.remove('btn-disabled', 'bg-slate-700', 'text-gray-500'); btn.classList.add('bg-green-800', 'text-white'); item.classList.remove('opacity-50');
+                    if (keys.includes(k)) { btn.disabled = true; btn.textContent = "OWNED"; btn.classList.remove('bg-green-800', 'text-white'); btn.classList.add('bg-slate-700', 'text-gray-500', 'btn-disabled'); item.classList.add('opacity-50'); }
                 });
             },
 
             startShopTimer(startTime) {
                 const duration = 10000;
                 const bar = document.getElementById('shopTimerBar');
-                
                 this.state.timerInterval = setInterval(() => {
                     const elapsed = Date.now() - (startTime || Date.now());
                     const remaining = Math.max(0, duration - elapsed);
                     const pct = (remaining / duration) * 100;
                     bar.style.width = pct + '%';
-
-                    if (remaining <= 0) {
-                        clearInterval(this.state.timerInterval);
-                        document.getElementById('shopLockedMsg').classList.remove('hidden');
-                        ['key1', 'key2', 'key3'].forEach(k => {
-                            document.getElementById('btn-'+k).disabled = true;
-                        });
-                    }
+                    if (remaining <= 0) { clearInterval(this.state.timerInterval); document.getElementById('shopLockedMsg').classList.remove('hidden'); ['key1', 'key2', 'key3'].forEach(k => { document.getElementById('btn-'+k).disabled = true; }); }
                 }, 50);
             },
 
@@ -1135,32 +1167,20 @@
             },
 
             async submitAnswer(ans) {
-                // REMOVED GUARD TO ALLOW RE-SELECTION
-                // if(this.state.hasAnswered) return; 
+                const elapsed = Date.now() - this.state.gameData.startTime;
+                if(elapsed > 20000) return; // Strict lock if time is up
 
                 if(this.state.currentWager === 0) this.state.currentWager = Math.max(1, Math.floor(this.state.playerData.cash * 0.25));
                 this.state.hasAnswered = true;
 
-                // Reset all buttons visual state first
-                ['A','B','C','D'].forEach(k => {
-                    const btn = document.getElementById('btn'+k);
-                    btn.classList.add('bg-slate-900/50');
-                    btn.classList.remove('bg-yellow-600', 'text-slate-900');
-                });
-
-                // Highlight selected
-                document.getElementById('btn'+ans).classList.remove('bg-slate-900/50');
-                document.getElementById('btn'+ans).classList.add('bg-yellow-600', 'text-slate-900');
+                ['A','B','C','D'].forEach(k => { document.getElementById('btn'+k).classList.remove('selected-answer'); });
+                document.getElementById('btn'+ans).classList.add('selected-answer');
                 
-                // Recalculate Multiplier based on NEW time
-                const elapsed = Date.now() - this.state.gameData.startTime;
                 let mult = 1.0;
                 if(elapsed < 5000) mult = 2.5;
                 else if(elapsed < 10000) mult = 1.5;
 
-                await updateDoc(doc(db, `sessions/${this.state.gameId}/players`, this.state.userId), {
-                    lastAnswer: ans, lastMultiplier: mult
-                });
+                await updateDoc(doc(db, `sessions/${this.state.gameId}/players`, this.state.userId), { lastAnswer: ans, lastMultiplier: mult });
             },
 
             async showResult(correct) {
@@ -1215,9 +1235,7 @@
 
             async takeLoan() {
                 this.showConfirm("WARNING: LOAN ADDS 1 DEBT TOKEN.\nDebt reduces Final Score by 20%.\nProceed?", async () => {
-                    await updateDoc(doc(db, `sessions/${this.state.gameId}/players`, this.state.userId), {
-                        cash: increment(500), debt: increment(1)
-                    });
+                    await updateDoc(doc(db, `sessions/${this.state.gameId}/players`, this.state.userId), { cash: increment(500), debt: increment(1) });
                 });
             },
 
@@ -1225,10 +1243,7 @@
                 const p = this.state.playerData;
                 if(p.cash < cost) return this.showNotification("INSUFFICIENT FUNDS");
                 if(p.keys && p.keys.includes(id)) return this.showNotification("ALREADY OWNED");
-
-                await updateDoc(doc(db, `sessions/${this.state.gameId}/players`, this.state.userId), {
-                    cash: increment(-cost), keys: arrayUnion(id)
-                });
+                await updateDoc(doc(db, `sessions/${this.state.gameId}/players`, this.state.userId), { cash: increment(-cost), keys: arrayUnion(id) });
                 document.getElementById('btn-'+id).disabled = true;
                 document.getElementById('btn-'+id).textContent = "OWNED";
                 this.showNotification("ASSET SECURED");
