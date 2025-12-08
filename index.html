@@ -1,0 +1,1241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Let's Vault In! - Heist Edition</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            font-family: 'Share Tech Mono', monospace;
+            background-color: #020617; /* Slate 950 */
+            color: #22c55e; /* Green 500 */
+            overflow-x: hidden;
+            touch-action: manipulation;
+        }
+        
+        .neon-text { text-shadow: 0 0 10px #22c55e; }
+        .neon-red { color: #ef4444; text-shadow: 0 0 10px #ef4444; }
+        .neon-yellow { color: #eab308; text-shadow: 0 0 10px #eab308; }
+
+        @keyframes scan { 0% { top: -10%; } 100% { top: 110%; } }
+        .scan-line {
+            position: fixed; top: 0; left: 0; width: 100%; height: 5px;
+            background-color: rgba(34, 197, 94, 0.3);
+            animation: scan 3s linear infinite; pointer-events: none; z-index: 50;
+        }
+
+        .btn-press:active { transform: scale(0.95); }
+        .btn-disabled { opacity: 0.5; pointer-events: none; filter: grayscale(100%); }
+        input, select { outline: none; transition: all 0.2s; }
+        input:focus, select:focus { border-color: #22c55e; box-shadow: 0 0 8px #22c55e; }
+        
+        /* Modal Animation */
+        @keyframes fadeIn { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
+        .modal-anim { animation: fadeIn 0.2s ease-out forwards; }
+
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #15803d; border-radius: 3px; }
+    </style>
+</head>
+<body class="bg-slate-950 min-h-screen text-green-500 selection:bg-green-900 selection:text-white relative">
+
+    <div class="scan-line"></div>
+
+    <!-- CUSTOM NOTIFICATION MODAL -->
+    <div id="modal-overlay" class="hidden fixed inset-0 bg-black/80 z-[100] flex items-center justify-center p-4 backdrop-blur-sm">
+        <div id="modal-box" class="bg-slate-900 border border-green-500 p-6 rounded shadow-[0_0_20px_rgba(34,197,94,0.3)] max-w-sm w-full modal-anim text-center relative overflow-hidden">
+            <div class="absolute top-0 left-0 w-full h-1 bg-green-500"></div>
+            <i id="modal-icon" class="fas fa-exclamation-triangle text-4xl mb-4 text-yellow-500"></i>
+            <h3 id="modal-title" class="text-xl font-bold mb-2 text-white">SYSTEM ALERT</h3>
+            <p id="modal-msg" class="text-sm text-green-400 mb-6">Message goes here...</p>
+            
+            <!-- Alert Button -->
+            <button id="modal-btn-ok" class="hidden w-full py-3 bg-green-700 text-slate-900 font-bold rounded hover:bg-green-600 transition-colors">
+                ACKNOWLEDGE
+            </button>
+
+            <!-- Confirm Buttons -->
+            <div id="modal-btns-confirm" class="hidden grid grid-cols-2 gap-3">
+                <button id="modal-btn-cancel" class="py-3 border border-green-700 text-green-500 rounded hover:bg-green-900/30">CANCEL</button>
+                <button id="modal-btn-yes" class="py-3 bg-red-600 text-white font-bold rounded hover:bg-red-500 shadow-[0_0_10px_rgba(220,38,38,0.5)]">PROCEED</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN APP CONTAINER -->
+    <div id="app" class="max-w-md mx-auto min-h-screen relative flex flex-col border-x border-green-900/30 shadow-2xl shadow-green-900/10">
+        
+        <!-- HEADER -->
+        <header class="flex justify-between items-center p-4 border-b border-green-800/50 bg-slate-900/50 backdrop-blur">
+            <h1 class="text-xl font-bold tracking-widest uppercase neon-text flex items-center gap-2">
+                <i class="fas fa-vault"></i> VAULT_IN
+            </h1>
+            <div id="connectionStatus" class="text-[10px] text-green-700 animate-pulse">CONNECTING...</div>
+        </header>
+
+        <!-- VIEW: LANDING -->
+        <div id="view-landing" class="flex flex-col gap-6 items-center justify-center flex-1 p-6">
+            <div class="text-center space-y-2 mb-8">
+                <div class="inline-block p-6 rounded-full border-2 border-green-500/30 bg-green-900/10 mb-4">
+                    <i class="fas fa-user-secret text-6xl text-green-500 animate-pulse"></i>
+                </div>
+                <p class="text-green-400 font-bold tracking-widest text-lg">HEIST PROTOCOL</p>
+                <p class="text-xs text-green-700">SECURE TERMINAL ACCESS</p>
+            </div>
+            <!-- Check Teacher Status -->
+            <button onclick="app.checkTeacherStatus()" class="btn-press w-full py-4 border border-green-500 bg-green-900/20 text-green-400 font-bold uppercase hover:bg-green-500 hover:text-slate-900 transition-colors rounded">
+                <i class="fas fa-user-tie mr-2"></i> Overseer (Teacher)
+            </button>
+            
+            <!-- Student Flow Trigger -->
+            <button onclick="app.startStudentFlow()" class="btn-press w-full py-4 border border-green-500 bg-green-900/20 text-green-400 font-bold uppercase hover:bg-green-500 hover:text-slate-900 transition-colors rounded">
+                <i class="fas fa-users mr-2"></i> Heist Crew (Student)
+            </button>
+        </div>
+
+        <!-- VIEW: TEACHER LOGIN (UPDATED) -->
+        <div id="view-teacher-login" class="hidden flex flex-col gap-4 justify-center flex-1 p-8">
+            <h2 class="text-xl text-center border-b border-green-800 pb-2 mb-4">OVERSEER AUTHENTICATION</h2>
+            
+            <div class="space-y-3">
+                <div>
+                    <label class="text-[10px] text-green-600 ml-1">ADMIN EMAIL</label>
+                    <input type="email" id="adminEmail" placeholder="admin@vault.com" class="w-full bg-slate-900 border border-green-700 text-green-400 p-3 rounded placeholder-green-900 focus:bg-slate-800">
+                </div>
+                <div>
+                    <label class="text-[10px] text-green-600 ml-1">PASSWORD</label>
+                    <input type="password" id="adminPass" placeholder="••••••••" class="w-full bg-slate-900 border border-green-700 text-green-400 p-3 rounded placeholder-green-900 focus:bg-slate-800">
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3 mt-2">
+                <button onclick="app.loginTeacher()" class="btn-press py-3 bg-green-700 text-white font-bold rounded hover:bg-green-600 shadow-lg">
+                    LOGIN
+                </button>
+                <button onclick="app.registerTeacher()" class="btn-press py-3 border border-green-600 text-green-500 font-bold rounded hover:bg-green-900/30">
+                    CREATE ID
+                </button>
+            </div>
+            
+            <button onclick="app.showLanding()" class="text-xs text-green-800 mt-4 hover:text-green-500 text-center"> [ CANCEL SEQUENCE ] </button>
+        </div>
+
+        <!-- VIEW: TEACHER SETUP -->
+        <div id="view-teacher-setup" class="hidden flex flex-col h-full p-4">
+            <div class="flex justify-between items-center mb-4 border-b border-yellow-800 pb-1">
+                <h2 class="text-lg font-bold text-yellow-500">MISSION BRIEFING</h2>
+                <button onclick="app.logout()" class="text-[10px] text-red-500 hover:text-red-400 border border-red-900 px-2 py-1 rounded">LOGOUT</button>
+            </div>
+            
+            <div class="bg-slate-900 p-3 rounded border border-green-800 mb-4">
+                <input type="text" id="setupQ" placeholder="Enter Question Text" class="w-full bg-slate-800 text-sm p-2 mb-2 rounded border border-slate-700">
+                <div class="grid grid-cols-2 gap-2 mb-2">
+                    <input type="text" id="setupA" placeholder="Option A" class="bg-slate-800 text-xs p-2 rounded border border-slate-700">
+                    <input type="text" id="setupB" placeholder="Option B" class="bg-slate-800 text-xs p-2 rounded border border-slate-700">
+                    <input type="text" id="setupC" placeholder="Option C" class="bg-slate-800 text-xs p-2 rounded border border-slate-700">
+                    <input type="text" id="setupD" placeholder="Option D" class="bg-slate-800 text-xs p-2 rounded border border-slate-700">
+                </div>
+                <div class="flex gap-2">
+                    <select id="setupCorrect" class="bg-slate-800 text-xs p-2 rounded border border-slate-700 flex-1">
+                        <option value="A">Correct: A</option>
+                        <option value="B">Correct: B</option>
+                        <option value="C">Correct: C</option>
+                        <option value="D">Correct: D</option>
+                    </select>
+                    <button onclick="app.addQuestionToQueue()" class="bg-green-800 text-white text-xs px-4 rounded hover:bg-green-700">ADD</button>
+                </div>
+            </div>
+            <div class="flex-1 overflow-y-auto mb-4 border border-green-900/50 rounded bg-black/20 p-2">
+                <h3 class="text-xs text-green-600 mb-2">DATABASE QUEUE: <span id="qCount">0</span></h3>
+                <div id="questionsPreview" class="space-y-2 text-xs"></div>
+            </div>
+            <div class="grid grid-cols-2 gap-3 mt-auto">
+                <button onclick="app.loadDemoData()" class="py-3 border border-yellow-700 text-yellow-500 text-xs rounded hover:bg-yellow-900/20">
+                    <i class="fas fa-bolt mr-1"></i> LOAD SIMULATION
+                </button>
+                <button onclick="app.initializeHeist()" class="py-3 bg-green-600 text-slate-900 font-bold text-xs rounded hover:bg-green-500 shadow-lg shadow-green-900/40">
+                    <i class="fas fa-fingerprint mr-1"></i> INITIALIZE HEIST
+                </button>
+            </div>
+            <button onclick="app.viewHistory()" class="mt-3 w-full py-3 border border-green-600 text-green-500 font-bold text-xs rounded hover:bg-green-900/30 transition-all flex justify-center items-center gap-2">
+                <i class="fas fa-history"></i> ARCHIVED MISSION LOGS
+            </button>
+        </div>
+
+        <!-- VIEW: TEACHER HISTORY -->
+        <div id="view-teacher-history" class="hidden flex flex-col h-full p-4">
+            <h2 class="text-lg font-bold text-yellow-500 border-b border-yellow-800 pb-1 mb-4 text-center">ARCHIVED LOGS</h2>
+            <div class="flex-1 overflow-y-auto space-y-2" id="historyList">
+                <div class="text-center text-xs text-green-500 animate-pulse">DECRYPTING ARCHIVES...</div>
+            </div>
+            <button onclick="app.showView('view-teacher-setup')" class="mt-4 py-3 border border-green-700 text-green-500 text-xs rounded hover:bg-green-900/20">
+                RETURN TO SETUP
+            </button>
+        </div>
+
+        <!-- VIEW: TEACHER DASHBOARD (LIVE) -->
+        <div id="view-teacher-dash" class="hidden flex flex-col h-full p-4">
+            <div class="bg-slate-900 p-4 border border-green-600 rounded mb-4 shadow-green-900/20 shadow-lg">
+                <div class="flex justify-between items-start mb-2">
+                    <div>
+                        <span class="text-[10px] text-green-600 block">VAULT ACCESS CODE</span>
+                        <span id="displayCode" class="text-4xl font-bold tracking-widest text-white font-mono">----</span>
+                    </div>
+                    <div class="text-right">
+                        <span class="text-[10px] text-green-600 block">STATUS</span>
+                        <span id="gameStatusDisplay" class="text-yellow-500 font-bold text-sm">LOBBY</span>
+                        <div id="teacherTimerContainer" class="hidden mt-1 bg-black/50 px-2 py-1 rounded border border-green-800">
+                            <i class="fas fa-clock text-green-500 text-xs"></i>
+                            <span id="teacherTimerDisplay" class="text-lg font-bold text-white font-mono">00s</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="mb-4">
+                <button onclick="app.advanceGame()" id="mainControlBtn" class="w-full py-4 bg-yellow-600 hover:bg-yellow-500 text-slate-900 font-bold rounded shadow-lg text-lg transition-all">
+                    START GAME
+                </button>
+                <div class="flex justify-between mt-2 text-[10px] text-green-800 font-bold">
+                    <span>Q: <span id="currentQIndexDisplay">0</span> / <span id="totalQDisplay">0</span></span>
+                    <span id="actionRequiredDisplay" class="text-green-500">WAITING FOR TEAMS...</span>
+                </div>
+            </div>
+            <h3 class="text-xs text-green-600 mb-2 font-bold uppercase border-b border-green-900 pb-1 flex justify-between">
+                <span>CREW STATUS</span>
+                <span>ASSETS</span>
+            </h3>
+            <div class="flex-1 overflow-y-auto border border-green-900/30 rounded p-2 bg-slate-900/40">
+                <div id="teacherLeaderboard" class="space-y-2"></div>
+            </div>
+        </div>
+
+        <!-- VIEW: TEACHER REPORT -->
+        <div id="view-teacher-report" class="hidden flex flex-col h-full p-4">
+            <h2 class="text-xl font-bold text-center text-green-400 mb-4 border-b border-green-800 pb-2">MISSION DEBRIEF</h2>
+            <div class="flex-1 overflow-y-auto bg-slate-900 rounded border border-green-800 p-2">
+                <table class="w-full text-xs text-left">
+                    <thead class="text-green-600 border-b border-green-800">
+                        <tr>
+                            <th class="p-2">RK</th>
+                            <th class="p-2">CREW</th>
+                            <th class="p-2">CASH</th>
+                            <th class="p-2">KEYS</th>
+                            <th class="p-2">DEBT</th>
+                            <th class="p-2 text-right">SCORE</th>
+                        </tr>
+                    </thead>
+                    <tbody id="reportTableBody" class="text-white"></tbody>
+                </table>
+            </div>
+            <div id="reportControls" class="mt-4 flex gap-2">
+                <button onclick="window.location.reload()" class="flex-1 py-3 bg-red-900/50 border border-red-700 text-red-400 text-xs font-bold rounded hover:bg-red-900">
+                    RESET SYSTEM
+                </button>
+            </div>
+            <button id="historyBackBtn" onclick="app.showView('view-teacher-history')" class="hidden mt-2 w-full py-3 bg-gray-800 text-white text-xs rounded">BACK TO LIST</button>
+        </div>
+
+        <!-- VIEW: STUDENT LOGIN -->
+        <div id="view-student-login" class="hidden flex flex-col gap-4 justify-center flex-1 p-8">
+            <h2 class="text-xl text-center border-b border-green-800 pb-2 mb-4">CREW CHECK-IN</h2>
+            <div class="space-y-1">
+                <label class="text-[10px] text-green-600 uppercase">Vault Code</label>
+                <input type="text" id="joinCode" placeholder="####" maxlength="4" class="w-full bg-slate-900 border border-green-600 text-green-400 p-4 text-center text-3xl tracking-[0.5em] rounded uppercase placeholder-green-900" inputmode="numeric">
+            </div>
+            <div class="space-y-1">
+                <label class="text-[10px] text-green-600 uppercase">Crew Name</label>
+                <input type="text" id="groupName" placeholder="TEAM ALPHA" class="w-full bg-slate-900 border border-green-600 text-green-400 p-4 text-center text-lg rounded uppercase placeholder-green-900">
+            </div>
+            <button onclick="app.joinGame()" class="btn-press w-full py-4 bg-green-700 text-white font-bold rounded hover:bg-green-600 mt-6 shadow-lg shadow-green-900/50">
+                <i class="fas fa-link mr-2"></i> ESTABLISH LINK
+            </button>
+            <button onclick="app.showLanding()" class="text-xs text-green-800 text-center mt-4 hover:text-green-500"> [ ABORT ] </button>
+        </div>
+
+        <!-- VIEW: STUDENT GAME -->
+        <div id="view-student-game" class="hidden flex flex-col h-full relative">
+            <div class="flex justify-between items-center bg-slate-900 p-3 border-b border-green-800 shadow-md z-10">
+                <div>
+                    <span class="text-[10px] text-green-600 block">FUNDS</span>
+                    <span class="text-xl font-bold text-green-400">$<span id="playerCash">1000</span></span>
+                </div>
+                <div class="flex items-center gap-2" id="keyInventory"></div>
+            </div>
+            <div id="game-content" class="flex-1 flex flex-col relative overflow-hidden p-3">
+                
+                <!-- STATE: LOBBY -->
+                <div id="state-lobby" class="flex flex-col items-center justify-center h-full text-center animate-pulse">
+                    <i class="fas fa-satellite-dish text-5xl mb-6 text-green-800"></i>
+                    <h2 class="text-xl font-bold text-green-500">AWAITING SIGNAL</h2>
+                    <p class="text-xs text-green-700 mt-2">STANDBY FOR OVERSEER</p>
+                </div>
+
+                <!-- STATE: BETTING -->
+                <div id="state-betting" class="hidden flex flex-col justify-center h-full w-full gap-4">
+                    <div class="text-center mb-4">
+                        <h2 class="text-2xl font-bold neon-text mb-1">PLACE WAGER</h2>
+                        <div class="text-[10px] text-green-600">CONFIDENCE LEVEL REQUIRED</div>
+                    </div>
+                    <div class="bg-black/50 p-6 rounded border border-green-700 text-center shadow-inner">
+                        <span class="text-xs text-green-600 uppercase">Risk Amount</span>
+                        <div class="text-5xl font-bold text-yellow-400 my-3">$<span id="wagerAmount">0</span></div>
+                    </div>
+                    <div class="grid grid-cols-3 gap-2 mt-2">
+                        <button onclick="app.setWager(0.25)" class="btn-press py-4 bg-green-900/30 border border-green-600 rounded hover:bg-green-800 font-bold">25%</button>
+                        <button onclick="app.setWager(0.50)" class="btn-press py-4 bg-green-900/30 border border-green-600 rounded hover:bg-green-800 font-bold">50%</button>
+                        <button onclick="app.setWager(1.00)" class="btn-press py-4 bg-red-900/20 border border-red-800 text-red-500 rounded hover:bg-red-900/40 font-bold shadow-[0_0_10px_rgba(239,68,68,0.2)]">ALL IN</button>
+                    </div>
+                </div>
+
+                <!-- STATE: QUESTION -->
+                <div id="state-question" class="hidden flex flex-col h-full">
+                    <div class="w-full h-3 bg-slate-800 mb-4 rounded-full overflow-hidden relative border border-slate-700">
+                        <div id="timerBar" class="h-full bg-green-500 absolute top-0 left-0 w-full"></div>
+                    </div>
+                    <div class="text-center mb-2">
+                        <span id="multiplierBadge" class="bg-green-500 text-slate-900 text-[10px] font-bold px-2 py-1 rounded">2.5x BONUS ACTIVE</span>
+                    </div>
+                    <div class="bg-slate-900/80 p-4 border-l-4 border-green-500 mb-4 rounded shadow-lg flex-grow-0">
+                        <p id="qText" class="text-lg font-bold text-white leading-snug">Decrypting...</p>
+                    </div>
+                    <div id="autoBetMsg" class="hidden text-center text-xs text-red-500 animate-pulse mb-2">⚠ EMERGENCY AUTO-WAGER APPLIED (25%)</div>
+                    <div class="grid grid-cols-1 gap-3 flex-1 overflow-y-auto">
+                        <button onclick="app.submitAnswer('A')" id="btnA" class="btn-press text-left p-4 border border-green-800 bg-slate-900/50 rounded flex items-center hover:bg-green-900/30">
+                            <span class="bg-green-900 text-green-300 w-8 h-8 flex items-center justify-center rounded font-bold mr-3 border border-green-700">A</span>
+                            <span id="optA" class="text-sm">...</span>
+                        </button>
+                        <button onclick="app.submitAnswer('B')" id="btnB" class="btn-press text-left p-4 border border-green-800 bg-slate-900/50 rounded flex items-center hover:bg-green-900/30">
+                            <span class="bg-green-900 text-green-300 w-8 h-8 flex items-center justify-center rounded font-bold mr-3 border border-green-700">B</span>
+                            <span id="optB" class="text-sm">...</span>
+                        </button>
+                        <button onclick="app.submitAnswer('C')" id="btnC" class="btn-press text-left p-4 border border-green-800 bg-slate-900/50 rounded flex items-center hover:bg-green-900/30">
+                            <span class="bg-green-900 text-green-300 w-8 h-8 flex items-center justify-center rounded font-bold mr-3 border border-green-700">C</span>
+                            <span id="optC" class="text-sm">...</span>
+                        </button>
+                        <button onclick="app.submitAnswer('D')" id="btnD" class="btn-press text-left p-4 border border-green-800 bg-slate-900/50 rounded flex items-center hover:bg-green-900/30">
+                            <span class="bg-green-900 text-green-300 w-8 h-8 flex items-center justify-center rounded font-bold mr-3 border border-green-700">D</span>
+                            <span id="optD" class="text-sm">...</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- STATE: RESULT -->
+                <div id="state-result" class="hidden flex flex-col items-center justify-center h-full text-center p-4">
+                    <div id="resultIcon" class="text-6xl mb-6 drop-shadow-lg"></div>
+                    <h2 id="resultTitle" class="text-4xl font-bold mb-2 tracking-wide"></h2>
+                    <p id="resultMessage" class="text-sm text-green-400 mb-2 opacity-80"></p>
+                    <div class="text-xs bg-slate-800 px-3 py-1 rounded text-yellow-500 mb-6 font-bold uppercase tracking-wider">
+                        Multiplier: <span id="resultMultiplier">1.0x</span>
+                    </div>
+                    <div class="bg-slate-900 p-6 rounded-lg border border-slate-700 w-full shadow-xl">
+                        <p class="text-[10px] text-slate-400 uppercase tracking-widest mb-1">Current Balance</p>
+                        <p class="text-3xl font-bold text-white">$<span id="resultBalance">0</span></p>
+                    </div>
+                </div>
+
+                <!-- STATE: SHOP -->
+                <div id="state-shop" class="hidden flex flex-col h-full">
+                    <div class="text-center mb-2">
+                        <h2 class="text-xl font-bold text-yellow-500 neon-yellow">
+                            <i class="fas fa-shopping-cart"></i> BLACK MARKET
+                        </h2>
+                        <p class="text-[10px] text-yellow-700">TIME REMAINING</p>
+                    </div>
+                    <div class="w-full h-4 bg-slate-800 mb-4 rounded-full overflow-hidden relative border border-red-900/50">
+                        <div id="shopTimerBar" class="h-full bg-red-600 absolute top-0 left-0 w-full"></div>
+                    </div>
+                    <div class="flex-1 space-y-3 overflow-y-auto pb-20" id="shopItemsContainer">
+                        <!-- Key Alpha (New Price: $1500) -->
+                        <div class="bg-slate-900/80 border border-green-600 p-4 rounded flex justify-between items-center shadow-lg transition-all" id="item-key1">
+                            <div>
+                                <div class="font-bold text-green-400 flex items-center gap-2"><i class="fas fa-key text-yellow-500"></i> ALPHA KEY</div>
+                                <div class="text-[10px] text-green-600">REQ: $1500</div>
+                            </div>
+                            <button onclick="app.buyItem('key1', 1500)" id="btn-key1" class="bg-green-800 text-white px-4 py-2 rounded text-xs font-bold hover:bg-green-600 border border-green-600">BUY</button>
+                        </div>
+                        <!-- Key Beta (New Price: $3000) -->
+                        <div class="bg-slate-900/80 border border-green-600 p-4 rounded flex justify-between items-center shadow-lg transition-all" id="item-key2">
+                            <div>
+                                <div class="font-bold text-green-400 flex items-center gap-2"><i class="fas fa-key text-yellow-500"></i> BETA KEY</div>
+                                <div class="text-[10px] text-green-600">REQ: $3000</div>
+                            </div>
+                            <button onclick="app.buyItem('key2', 3000)" id="btn-key2" class="bg-green-800 text-white px-4 py-2 rounded text-xs font-bold hover:bg-green-600 border border-green-600">BUY</button>
+                        </div>
+                        <!-- Key Omega (New Price: $5000) -->
+                        <div class="bg-slate-900/80 border border-green-600 p-4 rounded flex justify-between items-center shadow-lg transition-all" id="item-key3">
+                            <div>
+                                <div class="font-bold text-green-400 flex items-center gap-2"><i class="fas fa-key text-yellow-500"></i> OMEGA KEY</div>
+                                <div class="text-[10px] text-green-600">REQ: $5000</div>
+                            </div>
+                            <button onclick="app.buyItem('key3', 5000)" id="btn-key3" class="bg-green-800 text-white px-4 py-2 rounded text-xs font-bold hover:bg-green-600 border border-green-600">BUY</button>
+                        </div>
+                    </div>
+                    <div id="shopLockedMsg" class="hidden absolute inset-0 bg-black/80 flex items-center justify-center flex-col z-20 backdrop-blur-sm">
+                        <i class="fas fa-lock text-red-500 text-5xl mb-4"></i>
+                        <h3 class="text-2xl font-bold text-red-500 neon-red">MARKET CLOSED</h3>
+                    </div>
+                </div>
+
+                <!-- STATE: GAME OVER -->
+                <div id="state-gameover" class="hidden flex flex-col items-center justify-center h-full text-center p-4">
+                    <i class="fas fa-flag-checkered text-6xl mb-4 text-green-500"></i>
+                    <h2 class="text-3xl font-bold mb-1 neon-text">MISSION END</h2>
+                    <div class="text-2xl font-bold text-yellow-500 mb-6 bg-slate-900 px-6 py-2 rounded border border-yellow-600 shadow-lg">
+                        RANK: <span id="finalRankDisplay" class="text-white">CALCULATING...</span>
+                    </div>
+                    <div class="bg-slate-900 p-4 rounded w-full border border-green-700 mb-4">
+                        <div class="flex justify-between text-xs text-gray-400">
+                            <span>NET WORTH (Cash + Assets)</span>
+                            <span class="text-white font-bold">$<span id="endCash">0</span></span>
+                        </div>
+                        <div class="flex justify-between text-xs text-red-400 mt-2">
+                            <span>DEBT PENALTY</span>
+                            <span class="font-bold">-<span id="endPenalty">0</span>%</span>
+                        </div>
+                        <div class="border-t border-slate-700 mt-2 pt-2 flex justify-between">
+                            <span class="text-green-500 font-bold">FINAL SCORE</span>
+                            <span class="text-xl text-yellow-400 font-bold" id="endScore">0</span>
+                        </div>
+                    </div>
+                    <button onclick="window.location.reload()" class="w-full py-4 bg-red-900 border border-red-600 text-white font-bold rounded hover:bg-red-800 shadow-lg shadow-red-900/50">
+                        LEAVE HEIST
+                    </button>
+                </div>
+            </div>
+            <button id="loanSharkBtn" onclick="app.takeLoan()" class="hidden absolute bottom-24 left-1/2 transform -translate-x-1/2 bg-red-900 border-2 border-red-500 text-white px-6 py-3 rounded-full shadow-[0_0_20px_rgba(220,38,38,0.5)] animate-bounce font-bold z-50 text-sm whitespace-nowrap">
+                <i class="fas fa-hand-holding-dollar"></i> GET $500 (DEBT)
+            </button>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getFirestore, collection, doc, setDoc, getDoc, onSnapshot, updateDoc, increment, arrayUnion, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getAuth, signInAnonymously, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDBMu-776lq9Z25s7IaVbyVV9gcsUj2vtc",
+            authDomain: "letsvaultin.firebaseapp.com",
+            projectId: "letsvaultin",
+            storageBucket: "letsvaultin.firebasestorage.app",
+            messagingSenderId: "484241631372",
+            appId: "1:484241631372:web:5641c42a164297b60333a9"
+        };
+
+        const fbApp = initializeApp(firebaseConfig);
+        const db = getFirestore(fbApp);
+        const auth = getAuth(fbApp);
+
+        window.app = {
+            state: {
+                role: null, gameId: null, userId: null, questions: [], 
+                playerData: {}, gameData: {}, hasAnswered: false, currentWager: 0, 
+                timerInterval: null, playerSnapshots: [], teacherTimerInterval: null,
+                isTeacher: false
+            },
+            
+            dom: {},
+
+            async init() {
+                document.getElementById('connectionStatus').textContent = "WAITING FOR UPLINK...";
+                
+                // Real-time auth listener
+                onAuthStateChanged(auth, (user) => {
+                    if (user) {
+                        this.state.userId = user.uid;
+                        this.state.isTeacher = !user.isAnonymous; // Heuristic: Email users are teachers
+                        
+                        document.getElementById('connectionStatus').textContent = this.state.isTeacher ? "OVERSEER CONNECTED" : "CREW LINKED";
+                        document.getElementById('connectionStatus').className = "text-[10px] text-green-500 font-bold";
+                    } else {
+                        // Signed out
+                        document.getElementById('connectionStatus').textContent = "NO CONNECTION";
+                        this.state.userId = null;
+                        this.state.isTeacher = false;
+                    }
+                });
+            },
+
+            // --- NOTIFICATION SYSTEM ---
+            showNotification(msg) {
+                const overlay = document.getElementById('modal-overlay');
+                document.getElementById('modal-title').textContent = "SYSTEM ALERT";
+                document.getElementById('modal-msg').textContent = msg;
+                document.getElementById('modal-icon').className = "fas fa-info-circle text-4xl mb-4 text-green-500";
+                
+                overlay.classList.remove('hidden');
+                document.getElementById('modal-btn-ok').classList.remove('hidden');
+                document.getElementById('modal-btns-confirm').classList.add('hidden');
+                document.getElementById('modal-btn-ok').onclick = () => overlay.classList.add('hidden');
+            },
+
+            showConfirm(msg, onYes) {
+                const overlay = document.getElementById('modal-overlay');
+                document.getElementById('modal-title').textContent = "WARNING: ACTION REQUIRED";
+                document.getElementById('modal-msg').textContent = msg;
+                document.getElementById('modal-icon').className = "fas fa-exclamation-triangle text-4xl mb-4 text-yellow-500";
+                
+                overlay.classList.remove('hidden');
+                document.getElementById('modal-btn-ok').classList.add('hidden');
+                document.getElementById('modal-btns-confirm').classList.remove('hidden');
+                
+                document.getElementById('modal-btn-yes').onclick = () => {
+                    overlay.classList.add('hidden');
+                    onYes();
+                };
+                document.getElementById('modal-btn-cancel').onclick = () => overlay.classList.add('hidden');
+            },
+
+            showView(id) {
+                ['view-landing', 'view-teacher-login', 'view-teacher-setup', 'view-teacher-dash', 'view-teacher-report', 'view-teacher-history', 'view-student-login', 'view-student-game'].forEach(v => {
+                    document.getElementById(v).classList.add('hidden');
+                });
+                document.getElementById(id).classList.remove('hidden');
+            },
+
+            showStudentState(id) {
+                ['state-lobby', 'state-betting', 'state-question', 'state-result', 'state-shop', 'state-gameover'].forEach(s => {
+                    document.getElementById(s).classList.add('hidden');
+                });
+                document.getElementById(id).classList.remove('hidden');
+            },
+
+            showLanding() { this.showView('view-landing'); },
+            showTeacherLogin() { this.showView('view-teacher-login'); },
+            showStudentLogin() { this.showView('view-student-login'); },
+
+            // --- AUTH LOGIC (Updated) ---
+            
+            checkTeacherStatus() {
+                if (auth.currentUser && !auth.currentUser.isAnonymous) {
+                    this.state.role = 'teacher';
+                    this.showView('view-teacher-setup');
+                } else {
+                    this.showView('view-teacher-login');
+                }
+            },
+
+            async loginTeacher() {
+                const email = document.getElementById('adminEmail').value;
+                const pass = document.getElementById('adminPass').value;
+                if (!email || !pass) return this.showNotification("ENTER CREDENTIALS");
+
+                try {
+                    await signInWithEmailAndPassword(auth, email, pass);
+                    this.state.role = 'teacher';
+                    this.showView('view-teacher-setup');
+                } catch (error) {
+                    this.showNotification("AUTH FAILED: " + error.code);
+                }
+            },
+
+            async registerTeacher() {
+                const email = document.getElementById('adminEmail').value;
+                const pass = document.getElementById('adminPass').value;
+                if (!email || !pass) return this.showNotification("ENTER CREDENTIALS");
+
+                try {
+                    await createUserWithEmailAndPassword(auth, email, pass);
+                    this.state.role = 'teacher';
+                    this.showView('view-teacher-setup');
+                    this.showNotification("ID CREATED. WELCOME OVERSEER.");
+                } catch (error) {
+                    this.showNotification("REGISTRATION FAILED: " + error.code);
+                }
+            },
+
+            async logout() {
+                await signOut(auth);
+                window.location.reload();
+            },
+
+            async startStudentFlow() {
+                // If not signed in or is signed in as teacher (shouldn't happen on same device ideally but good to handle)
+                if (!auth.currentUser) {
+                    await signInAnonymously(auth);
+                }
+                // If user is teacher, they should logout first, but we'll assume crew button means crew intention
+                this.showView('view-student-login');
+            },
+
+            // --- GAME LOGIC ---
+
+            addQuestionToQueue(qData = null) {
+                const q = qData || {
+                    text: document.getElementById('setupQ').value,
+                    options: {
+                        A: document.getElementById('setupA').value,
+                        B: document.getElementById('setupB').value,
+                        C: document.getElementById('setupC').value,
+                        D: document.getElementById('setupD').value
+                    },
+                    correct: document.getElementById('setupCorrect').value
+                };
+                if(!q.text) return;
+                this.state.questions.push(q);
+                this.renderQuestionQueue();
+                if(!qData) {
+                    document.getElementById('setupQ').value = '';
+                    document.getElementById('setupA').value = '';
+                    document.getElementById('setupB').value = '';
+                    document.getElementById('setupC').value = '';
+                    document.getElementById('setupD').value = '';
+                }
+            },
+
+            loadDemoData() {
+                const demos = [
+                    { text: "Which element is the primary component of the sun?", options: { A: "Oxygen", B: "Hydrogen", C: "Carbon", D: "Iron" }, correct: "B" },
+                    { text: "In economics, what does GDP stand for?", options: { A: "Global Domestic Product", B: "Gross Domestic Product", C: "General Dollar Price", D: "Gross Dollar Profit" }, correct: "B" },
+                    { text: "Which planet in our solar system has the most gravity?", options: { A: "Jupiter", B: "Earth", C: "Saturn", D: "Neptune" }, correct: "A" },
+                    { text: "What is the powerhouse of the cell?", options: { A: "Nucleus", B: "Mitochondria", C: "Ribosome", D: "Cytoplasm" }, correct: "B" },
+                    { text: "Who painted the Starry Night?", options: { A: "Da Vinci", B: "Picasso", C: "Van Gogh", D: "Monet" }, correct: "C" }
+                ];
+                demos.forEach(d => this.addQuestionToQueue(d));
+            },
+
+            renderQuestionQueue() {
+                const div = document.getElementById('questionsPreview');
+                document.getElementById('qCount').textContent = this.state.questions.length;
+                div.innerHTML = this.state.questions.map((q, i) => `
+                    <div class="bg-slate-800 p-2 rounded mb-1 border-l-2 border-green-600">
+                        <span class="font-bold text-green-400">Q${i+1}:</span> ${q.text.substring(0, 30)}...
+                    </div>
+                `).join('');
+            },
+
+            async initializeHeist() {
+                if(this.state.questions.length === 0) return this.showNotification("DATABASE EMPTY. ADD QUESTIONS FIRST.");
+                
+                // Ensure we have a valid teacher ID
+                if (!auth.currentUser || auth.currentUser.isAnonymous) {
+                    return this.showNotification("SECURITY ERROR: OVERSEER AUTH REQUIRED");
+                }
+
+                this.state.gameId = Math.floor(1000 + Math.random() * 9000).toString();
+                
+                await setDoc(doc(db, "sessions", this.state.gameId), {
+                    created: Date.now(),
+                    teacherId: auth.currentUser.uid, // PERSISTENT ID
+                    phase: 'LOBBY',
+                    questionList: this.state.questions,
+                    currentQIndex: -1,
+                    currentQ: null,
+                    startTime: 0,
+                    shopStartTime: 0
+                });
+                
+                document.getElementById('displayCode').textContent = this.state.gameId;
+                document.getElementById('totalQDisplay').textContent = this.state.questions.length;
+                this.showView('view-teacher-dash');
+                this.monitorPlayers();
+                this.monitorGame();
+                this.startTeacherTimerSync(); 
+            },
+
+            async viewHistory() {
+                // Check auth
+                if (!auth.currentUser || auth.currentUser.isAnonymous) {
+                    return this.showNotification("AUTH REQUIRED TO ACCESS ARCHIVES");
+                }
+
+                this.showView('view-teacher-history');
+                const list = document.getElementById('historyList');
+                list.innerHTML = '<div class="text-center text-xs text-green-500 animate-pulse">DECRYPTING ARCHIVES...</div>';
+                
+                try {
+                    const q = query(collection(db, "sessions"), where("teacherId", "==", auth.currentUser.uid));
+                    const snap = await getDocs(q);
+                    
+                    if(snap.empty) {
+                        list.innerHTML = '<div class="text-center text-gray-500">NO ARCHIVED RECORDS FOUND</div>';
+                        return;
+                    }
+
+                    list.innerHTML = '';
+                    snap.forEach(d => {
+                        const data = d.data();
+                        const date = new Date(data.created).toLocaleString();
+                        const div = document.createElement('div');
+                        div.className = "bg-slate-900 border border-green-800 p-3 rounded flex justify-between items-center hover:bg-slate-800 cursor-pointer";
+                        div.onclick = () => this.loadPastGameReport(d.id, data);
+                        div.innerHTML = `
+                            <div>
+                                <div class="font-bold text-green-400">MISSION ID: ${d.id}</div>
+                                <div class="text-[10px] text-gray-500">${date}</div>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-xs text-yellow-500">STATUS: ${data.phase}</div>
+                            </div>
+                        `;
+                        list.appendChild(div);
+                    });
+                } catch (e) {
+                    console.error(e);
+                    list.innerHTML = '<div class="text-center text-red-500">ARCHIVE ACCESS ERROR</div>';
+                }
+            },
+
+            async loadPastGameReport(gameId, data) {
+                const q = collection(db, `sessions/${gameId}/players`);
+                const snap = await getDocs(q);
+                this.state.playerSnapshots = [];
+                snap.forEach(d => {
+                    const p = d.data();
+                    p.id = d.id;
+                    this.state.playerSnapshots.push(p);
+                });
+                this.renderTeacherReport(true); 
+            },
+
+            monitorPlayers() {
+                onSnapshot(collection(db, `sessions/${this.state.gameId}/players`), (snap) => {
+                    const div = document.getElementById('teacherLeaderboard');
+                    div.innerHTML = '';
+                    this.state.playerSnapshots = [];
+                    
+                    let betCount = 0;
+                    let answerCount = 0;
+                    
+                    const phase = this.state.gameData?.phase || 'LOBBY';
+
+                    snap.forEach(d => {
+                        const p = d.data();
+                        p.id = d.id;
+                        this.state.playerSnapshots.push(p);
+
+                        let statusHtml = '';
+                        let statusColor = 'text-gray-500';
+                        
+                        if(p.wager > 0) {
+                            betCount++;
+                        }
+                        if(p.lastAnswer) {
+                            answerCount++;
+                        }
+
+                        if (phase === 'BETTING') {
+                            if (p.wager > 0) {
+                                statusHtml = `<i class="fas fa-lock text-green-500"></i> BET LOCKED`;
+                                statusColor = 'text-green-500';
+                            } else {
+                                statusHtml = `deciding...`;
+                                statusColor = 'text-yellow-600 animate-pulse';
+                            }
+                        } 
+                        else if (phase === 'QUESTION') {
+                            if (p.lastAnswer) {
+                                statusHtml = `<i class="fas fa-check-circle text-green-500"></i> ANSWERED`;
+                                statusColor = 'text-green-500';
+                            } else {
+                                statusHtml = `THINKING...`;
+                                statusColor = 'text-yellow-600 animate-pulse';
+                            }
+                        }
+                        else if (phase === 'SHOP' || phase === 'LOBBY') {
+                             statusHtml = `READY`;
+                        }
+                        else {
+                             statusHtml = `standby`;
+                        }
+
+                        const keyIcons = (p.keys || []).map(() => '<i class="fas fa-key text-yellow-500 text-[10px]"></i>').join(' ');
+
+                        div.innerHTML += `
+                            <div class="flex justify-between items-center bg-slate-800 p-2 rounded mb-2 border border-slate-700">
+                                <div class="w-1/3">
+                                    <div class="font-bold text-white text-sm truncate">${p.name}</div>
+                                    <div class="text-[10px] ${p.debt > 0 ? 'text-red-500' : 'text-gray-500'}">DEBT: $${p.debt * 500}</div>
+                                </div>
+                                <div class="w-1/3 text-center">
+                                    <div class="text-[10px] font-bold ${statusColor}">${statusHtml}</div>
+                                </div>
+                                <div class="w-1/3 text-right">
+                                    <div class="font-bold text-green-400">$${p.cash}</div>
+                                    <div class="mt-1">${keyIcons}</div>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    
+                    const actionDisplay = document.getElementById('actionRequiredDisplay');
+                    if (phase === 'BETTING') {
+                        actionDisplay.textContent = `BETS: ${betCount}/${snap.size}`;
+                        actionDisplay.className = betCount === snap.size ? "text-green-500 font-bold" : "text-yellow-500 font-bold";
+                    } else if (phase === 'QUESTION') {
+                         actionDisplay.textContent = `ANSWERS: ${answerCount}/${snap.size}`;
+                         actionDisplay.className = answerCount === snap.size ? "text-green-500 font-bold" : "text-yellow-500 font-bold";
+                    } else {
+                        actionDisplay.textContent = "";
+                    }
+                });
+            },
+
+            monitorGame() {
+                onSnapshot(doc(db, "sessions", this.state.gameId), (snap) => {
+                    const data = snap.data();
+                    if(!data) return;
+                    this.state.gameData = data;
+                    document.getElementById('gameStatusDisplay').textContent = data.phase;
+                    document.getElementById('currentQIndexDisplay').textContent = (data.currentQIndex + 1);
+
+                    const btn = document.getElementById('mainControlBtn');
+                    const timerContainer = document.getElementById('teacherTimerContainer');
+                    
+                    timerContainer.classList.add('hidden');
+
+                    if(data.phase === 'LOBBY') {
+                        btn.textContent = "OPEN FIRST BETTING";
+                    }
+                    else if(data.phase === 'BETTING') {
+                        btn.textContent = "REVEAL QUESTION";
+                    }
+                    else if(data.phase === 'QUESTION') {
+                        btn.textContent = "SHOW RESULTS";
+                        timerContainer.classList.remove('hidden');
+                    }
+                    else if(data.phase === 'RESULT') {
+                        btn.textContent = "OPEN BLACK MARKET";
+                    }
+                    else if(data.phase === 'SHOP') {
+                        timerContainer.classList.remove('hidden');
+                        if(data.currentQIndex >= data.questionList.length - 1) {
+                            btn.textContent = "END HEIST (GAME OVER)";
+                        } else {
+                            btn.textContent = "NEXT ROUND (BETTING)";
+                        }
+                    }
+                    else if(data.phase === 'GAME_OVER') {
+                        if(this.state.role === 'teacher') this.renderTeacherReport();
+                    }
+                    
+                    if(this.state.role === 'student') this.handleStudentState(data);
+                });
+            },
+
+            startTeacherTimerSync() {
+                if (this.state.teacherTimerInterval) clearInterval(this.state.teacherTimerInterval);
+                this.state.teacherTimerInterval = setInterval(() => {
+                    const data = this.state.gameData;
+                    if (!data) return;
+                    
+                    const el = document.getElementById('teacherTimerDisplay');
+                    const now = Date.now();
+                    
+                    if (data.phase === 'QUESTION') {
+                        const elapsed = now - data.startTime;
+                        const remaining = Math.max(0, 20000 - elapsed);
+                        el.textContent = Math.ceil(remaining/1000) + "s";
+                        // Alarm color logic restored
+                        el.className = remaining < 6000 ? "text-lg font-bold text-red-500 font-mono animate-pulse" : "text-lg font-bold text-white font-mono";
+                    } 
+                    else if (data.phase === 'SHOP') {
+                        const elapsed = now - (data.shopStartTime || 0);
+                        const remaining = Math.max(0, 10000 - elapsed);
+                        el.textContent = Math.ceil(remaining/1000) + "s";
+                        el.className = "text-lg font-bold text-red-500 font-mono";
+                    }
+                }, 100);
+            },
+
+            async resetRoundState() {
+                const q = query(collection(db, `sessions/${this.state.gameId}/players`));
+                const snap = await getDocs(q);
+                const updates = [];
+                snap.forEach(d => {
+                    updates.push(updateDoc(doc(db, `sessions/${this.state.gameId}/players`, d.id), {
+                        wager: 0,
+                        lastAnswer: null,
+                        lastMultiplier: 1.0
+                    }));
+                });
+                await Promise.all(updates);
+            },
+
+            async advanceGame() {
+                const data = this.state.gameData;
+                let nextPhase = 'LOBBY';
+                let updates = {};
+
+                if (data.phase === 'LOBBY') {
+                    nextPhase = 'BETTING';
+                    updates = { currentQIndex: 0, phase: nextPhase };
+                    this.resetRoundState(); 
+                } 
+                else if (data.phase === 'BETTING') {
+                    nextPhase = 'QUESTION';
+                    const qData = data.questionList[data.currentQIndex];
+                    updates = { phase: nextPhase, currentQ: qData, startTime: Date.now() };
+                }
+                else if (data.phase === 'QUESTION') {
+                    nextPhase = 'RESULT';
+                    updates = { phase: nextPhase };
+                }
+                else if (data.phase === 'RESULT') {
+                    nextPhase = 'SHOP';
+                    updates = { phase: nextPhase, shopStartTime: Date.now() }; 
+                }
+                else if (data.phase === 'SHOP') {
+                    if (data.currentQIndex < data.questionList.length - 1) {
+                        nextPhase = 'BETTING';
+                        updates = { phase: nextPhase, currentQIndex: increment(1), currentQ: null };
+                        this.resetRoundState();
+                    } else {
+                        nextPhase = 'GAME_OVER';
+                        updates = { phase: nextPhase };
+                        this.finalizeRanks(); 
+                    }
+                }
+                await updateDoc(doc(db, "sessions", this.state.gameId), updates);
+            },
+
+            async finalizeRanks() {
+                const keyValues = { 'key1': 1500, 'key2': 3000, 'key3': 5000 };
+                
+                const ranked = this.state.playerSnapshots.map(p => {
+                    const penaltyPct = Math.min(1, (p.debt || 0) * 0.2);
+                    // Calculate Assets
+                    const assets = (p.keys || []).reduce((acc, k) => acc + (keyValues[k] || 0), 0);
+                    const netWorth = (p.cash || 0) + assets;
+                    
+                    const finalScore = Math.floor(netWorth * (1 - penaltyPct));
+                    return { ...p, finalScore };
+                }).sort((a,b) => b.finalScore - a.finalScore);
+
+                ranked.forEach(async (p, index) => {
+                    await updateDoc(doc(db, `sessions/${this.state.gameId}/players`, p.id), {
+                        rank: index + 1,
+                        finalScore: p.finalScore
+                    });
+                });
+            },
+
+            renderTeacherReport(isHistory = false) {
+                this.showView('view-teacher-report');
+                const tbody = document.getElementById('reportTableBody');
+                tbody.innerHTML = '';
+                
+                if(isHistory) {
+                    document.getElementById('reportControls').classList.add('hidden');
+                    document.getElementById('historyBackBtn').classList.remove('hidden');
+                } else {
+                    document.getElementById('reportControls').classList.remove('hidden');
+                    document.getElementById('historyBackBtn').classList.add('hidden');
+                }
+
+                const keyValues = { 'key1': 1500, 'key2': 3000, 'key3': 5000 };
+
+                const ranked = this.state.playerSnapshots.map(p => {
+                    const penaltyPct = Math.min(1, (p.debt || 0) * 0.2);
+                    
+                    // Net Worth Logic
+                    const assets = (p.keys || []).reduce((acc, k) => acc + (keyValues[k] || 0), 0);
+                    const netWorth = (p.cash || 0) + assets;
+                    const finalScore = Math.floor(netWorth * (1 - penaltyPct));
+                    
+                    return { ...p, penaltyPct, finalScore };
+                }).sort((a,b) => b.finalScore - a.finalScore);
+
+                ranked.forEach((p, i) => {
+                    // Logic for key icons in final report
+                    const keyIcons = (p.keys || []).map(() => '<i class="fas fa-key text-yellow-500 text-[10px]"></i>').join(' ');
+                    
+                    tbody.innerHTML += `
+                        <tr class="border-b border-green-900/30">
+                            <td class="p-2 text-white font-mono">#${p.rank || i+1}</td>
+                            <td class="p-2 font-bold">${p.name}</td>
+                            <td class="p-2 text-green-400">$${p.cash}</td>
+                            <td class="p-2 text-yellow-500 text-center">${keyIcons}</td>
+                            <td class="p-2 text-red-400">${p.debt} (-${Math.round(p.penaltyPct * 100)}%)</td>
+                            <td class="p-2 text-right text-yellow-500 font-bold text-lg">${p.finalScore}</td>
+                        </tr>
+                    `;
+                });
+            },
+
+            async joinGame() {
+                const code = document.getElementById('joinCode').value;
+                const name = document.getElementById('groupName').value;
+                if(!code || !name) return this.showNotification("MISSING CREDENTIALS");
+                const snap = await getDoc(doc(db, "sessions", code));
+                if(snap.exists()) {
+                    this.state.gameId = code;
+                    this.state.role = 'student';
+                    await setDoc(doc(db, `sessions/${code}/players`, this.state.userId), {
+                        name: name, cash: 1000, keys: [], debt: 0, wager: 0, lastAnswer: null
+                    });
+                    this.showView('view-student-game');
+                    onSnapshot(doc(db, `sessions/${code}/players`, this.state.userId), (d) => {
+                        this.state.playerData = d.data();
+                        this.updateStudentHUD();
+                        if(d.data().rank) {
+                            document.getElementById('finalRankDisplay').textContent = "#" + d.data().rank;
+                        }
+                    });
+                    this.monitorGame(); 
+                } else {
+                    this.showNotification("INVALID VAULT CODE");
+                }
+            },
+
+            handleStudentState(data) {
+                const phase = data.phase.toLowerCase();
+                if(this.state.timerInterval) clearInterval(this.state.timerInterval); 
+
+                if(phase === 'game_over') { this.showStudentGameOver(); return; }
+                this.showStudentState('state-' + phase);
+
+                if(phase === 'betting') {
+                    this.state.hasAnswered = false;
+                    document.getElementById('wagerAmount').textContent = 0;
+                    this.state.currentWager = 0;
+                    document.getElementById('autoBetMsg').classList.add('hidden');
+                    ['A','B','C','D'].forEach(k => {
+                        const btn = document.getElementById('btn'+k);
+                        btn.disabled = false;
+                        btn.className = "btn-press text-left p-4 border border-green-800 bg-slate-900/50 rounded flex items-center hover:bg-green-900/30";
+                    });
+                }
+                else if(phase === 'question') {
+                    this.renderQuestion(data.currentQ);
+                    if(this.state.currentWager === 0) this.forceAutoWager();
+                    this.startTimer(data.startTime);
+                }
+                else if(phase === 'result') {
+                    this.showResult(data.currentQ.correct);
+                }
+                else if(phase === 'shop') {
+                    this.setupShopUI(); 
+                    this.startShopTimer(data.shopStartTime);
+                }
+            },
+
+            async forceAutoWager() {
+                let p = this.state.playerData;
+                let amount = Math.floor(p.cash * 0.25);
+                if(amount === 0) amount = p.cash;
+                this.state.currentWager = amount;
+                document.getElementById('autoBetMsg').classList.remove('hidden');
+                await updateDoc(doc(db, `sessions/${this.state.gameId}/players`, this.state.userId), { wager: amount });
+            },
+
+            showStudentGameOver() {
+                this.showStudentState('state-gameover');
+                const p = this.state.playerData;
+                const penaltyPct = Math.min(1, (p.debt || 0) * 0.2);
+                
+                // Net Worth Calculation for Student View
+                const keyValues = { 'key1': 1500, 'key2': 3000, 'key3': 5000 };
+                const assets = (p.keys || []).reduce((acc, k) => acc + (keyValues[k] || 0), 0);
+                const netWorth = (p.cash || 0) + assets;
+                const finalScore = Math.floor(netWorth * (1 - penaltyPct));
+
+                document.getElementById('endCash').textContent = netWorth;
+                document.getElementById('endPenalty').textContent = Math.round(penaltyPct * 100);
+                document.getElementById('endScore').textContent = finalScore;
+                
+                if(p.rank) {
+                    document.getElementById('finalRankDisplay').textContent = "#" + p.rank;
+                }
+            },
+
+            renderQuestion(q) {
+                document.getElementById('qText').textContent = q.text;
+                document.getElementById('optA').textContent = q.options.A;
+                document.getElementById('optB').textContent = q.options.B;
+                document.getElementById('optC').textContent = q.options.C;
+                document.getElementById('optD').textContent = q.options.D;
+            },
+
+            startTimer(startTime) {
+                const duration = 20000;
+                const bar = document.getElementById('timerBar');
+                const badge = document.getElementById('multiplierBadge');
+                this.state.timerInterval = setInterval(() => {
+                    const elapsed = Date.now() - startTime;
+                    const remaining = Math.max(0, duration - elapsed);
+                    const pct = (remaining / duration) * 100;
+                    bar.style.width = pct + '%';
+                    if (elapsed < 5000) {
+                        badge.textContent = "2.5x PAYOUT ACTIVE";
+                        badge.className = "bg-purple-600 text-white text-[10px] font-bold px-2 py-1 rounded animate-pulse";
+                        bar.className = "h-full bg-purple-500 absolute top-0 left-0 transition-all duration-100 ease-linear";
+                    } else if (elapsed < 10000) {
+                        badge.textContent = "1.5x PAYOUT";
+                        badge.className = "bg-yellow-600 text-slate-900 text-[10px] font-bold px-2 py-1 rounded";
+                        bar.className = "h-full bg-yellow-500 absolute top-0 left-0 transition-all duration-100 ease-linear";
+                    } else {
+                        badge.textContent = "1.0x STANDARD";
+                        badge.className = "bg-slate-600 text-white text-[10px] font-bold px-2 py-1 rounded";
+                        bar.className = "h-full bg-red-600 absolute top-0 left-0 transition-all duration-100 ease-linear";
+                    }
+                    if (pct <= 0) clearInterval(this.state.timerInterval);
+                }, 100);
+            },
+
+            setupShopUI() {
+                document.getElementById('shopLockedMsg').classList.add('hidden');
+                const keys = this.state.playerData.keys || [];
+                
+                ['key1', 'key2', 'key3'].forEach(k => {
+                    const btn = document.getElementById('btn-'+k);
+                    const item = document.getElementById('item-'+k);
+                    btn.disabled = false;
+                    btn.textContent = "BUY";
+                    btn.classList.remove('btn-disabled', 'bg-slate-700', 'text-gray-500');
+                    btn.classList.add('bg-green-800', 'text-white');
+                    item.classList.remove('opacity-50');
+
+                    if (keys.includes(k)) {
+                        btn.disabled = true;
+                        btn.textContent = "OWNED";
+                        btn.classList.remove('bg-green-800', 'text-white');
+                        btn.classList.add('bg-slate-700', 'text-gray-500', 'btn-disabled');
+                        item.classList.add('opacity-50');
+                    }
+                });
+            },
+
+            startShopTimer(startTime) {
+                const duration = 10000;
+                const bar = document.getElementById('shopTimerBar');
+                
+                this.state.timerInterval = setInterval(() => {
+                    const elapsed = Date.now() - (startTime || Date.now());
+                    const remaining = Math.max(0, duration - elapsed);
+                    const pct = (remaining / duration) * 100;
+                    bar.style.width = pct + '%';
+
+                    if (remaining <= 0) {
+                        clearInterval(this.state.timerInterval);
+                        document.getElementById('shopLockedMsg').classList.remove('hidden');
+                        ['key1', 'key2', 'key3'].forEach(k => {
+                            document.getElementById('btn-'+k).disabled = true;
+                        });
+                    }
+                }, 50);
+            },
+
+            async setWager(pct) {
+                const cash = this.state.playerData.cash;
+                if(cash <= 0) return this.showNotification("INSOLVENT. VISIT LOAN SHARK.");
+                let amount = Math.floor(cash * pct);
+                if(amount === 0) amount = cash;
+                this.state.currentWager = amount;
+                document.getElementById('wagerAmount').textContent = amount;
+                await updateDoc(doc(db, `sessions/${this.state.gameId}/players`, this.state.userId), { wager: amount });
+            },
+
+            async submitAnswer(ans) {
+                // REMOVED GUARD TO ALLOW RE-SELECTION
+                // if(this.state.hasAnswered) return; 
+
+                if(this.state.currentWager === 0) this.state.currentWager = Math.max(1, Math.floor(this.state.playerData.cash * 0.25));
+                this.state.hasAnswered = true;
+
+                // Reset all buttons visual state first
+                ['A','B','C','D'].forEach(k => {
+                    const btn = document.getElementById('btn'+k);
+                    btn.classList.add('bg-slate-900/50');
+                    btn.classList.remove('bg-yellow-600', 'text-slate-900');
+                });
+
+                // Highlight selected
+                document.getElementById('btn'+ans).classList.remove('bg-slate-900/50');
+                document.getElementById('btn'+ans).classList.add('bg-yellow-600', 'text-slate-900');
+                
+                // Recalculate Multiplier based on NEW time
+                const elapsed = Date.now() - this.state.gameData.startTime;
+                let mult = 1.0;
+                if(elapsed < 5000) mult = 2.5;
+                else if(elapsed < 10000) mult = 1.5;
+
+                await updateDoc(doc(db, `sessions/${this.state.gameId}/players`, this.state.userId), {
+                    lastAnswer: ans, lastMultiplier: mult
+                });
+            },
+
+            async showResult(correct) {
+                const p = this.state.playerData;
+                const isCorrect = p.lastAnswer === correct;
+                const title = document.getElementById('resultTitle');
+                const msg = document.getElementById('resultMessage');
+                const icon = document.getElementById('resultIcon');
+                
+                const usedMult = p.lastMultiplier || 1.0;
+                const multEl = document.getElementById('resultMultiplier');
+                multEl.textContent = usedMult + "x";
+                if(usedMult >= 2.5) multEl.parentElement.className = "text-xs bg-purple-900/50 px-3 py-1 rounded text-purple-400 mb-6 font-bold uppercase tracking-wider border border-purple-500";
+                else if(usedMult >= 1.5) multEl.parentElement.className = "text-xs bg-yellow-900/50 px-3 py-1 rounded text-yellow-400 mb-6 font-bold uppercase tracking-wider border border-yellow-500";
+                else multEl.parentElement.className = "text-xs bg-slate-800 px-3 py-1 rounded text-gray-400 mb-6 font-bold uppercase tracking-wider";
+
+                let newCash = p.cash;
+                if(isCorrect) {
+                    const profit = Math.floor(this.state.currentWager * usedMult);
+                    newCash += profit;
+                    title.textContent = "PAYDAY";
+                    title.className = "text-4xl font-bold mb-2 tracking-wide neon-text text-green-500";
+                    msg.textContent = `Target Acquired. Profit: +$${profit}`;
+                    icon.innerHTML = '<i class="fas fa-sack-dollar text-green-500 animate-bounce"></i>';
+                } else {
+                    newCash -= this.state.currentWager;
+                    title.textContent = "BUSTED";
+                    title.className = "text-4xl font-bold mb-2 tracking-wide neon-red text-red-500";
+                    msg.textContent = `Security alert triggered. Lost: -$${this.state.currentWager}`;
+                    icon.innerHTML = '<i class="fas fa-bell text-red-500 animate-pulse"></i>';
+                }
+                document.getElementById('resultBalance').textContent = newCash;
+                await updateDoc(doc(db, `sessions/${this.state.gameId}/players`, this.state.userId), { cash: newCash });
+            },
+
+            updateStudentHUD() {
+                const p = this.state.playerData;
+                const cashEl = document.getElementById('playerCash');
+                cashEl.textContent = p.cash;
+                if(p.cash <= 0) {
+                    cashEl.classList.add('text-red-500');
+                    document.getElementById('loanSharkBtn').classList.remove('hidden');
+                    document.body.classList.add('glitch-active');
+                } else {
+                    cashEl.classList.remove('text-red-500');
+                    document.getElementById('loanSharkBtn').classList.add('hidden');
+                    document.body.classList.remove('glitch-active');
+                }
+                const inv = document.getElementById('keyInventory');
+                inv.innerHTML = (p.keys || []).map(() => '<i class="fas fa-key text-yellow-500 drop-shadow-md"></i>').join('');
+            },
+
+            async takeLoan() {
+                this.showConfirm("WARNING: LOAN ADDS 1 DEBT TOKEN.\nDebt reduces Final Score by 20%.\nProceed?", async () => {
+                    await updateDoc(doc(db, `sessions/${this.state.gameId}/players`, this.state.userId), {
+                        cash: increment(500), debt: increment(1)
+                    });
+                });
+            },
+
+            async buyItem(id, cost) {
+                const p = this.state.playerData;
+                if(p.cash < cost) return this.showNotification("INSUFFICIENT FUNDS");
+                if(p.keys && p.keys.includes(id)) return this.showNotification("ALREADY OWNED");
+
+                await updateDoc(doc(db, `sessions/${this.state.gameId}/players`, this.state.userId), {
+                    cash: increment(-cost), keys: arrayUnion(id)
+                });
+                document.getElementById('btn-'+id).disabled = true;
+                document.getElementById('btn-'+id).textContent = "OWNED";
+                this.showNotification("ASSET SECURED");
+            }
+        };
+
+        app.init();
+    </script>
+</body>
+</html>
